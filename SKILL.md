@@ -61,6 +61,9 @@ Use `scripts/audit.py <project_path>`.
   `Pipfile` / `poetry.lock`, runs `pip-audit` when available (network for the
   advisory DB), else emits a LOW "install pip-audit" notice. CVEs map to
   HIGH/MED/LOW by severity.
+- **CWE tagging + grade (#2):** every finding carries a CWE id (CWE-78,
+  CWE-502, …); the project gets an A–F grade from a severity-weighted penalty
+  (HIGH=10, MED=3, LOW=1). Grade prints with the CWE set for triage.
 - Severity: HIGH / MED / LOW. Project blocked from "done" if any HIGH unresolved.
 - Writes `[[Audit-<project>-<date>]]` to vault.
 
@@ -103,6 +106,11 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - Hash-chain is local tamper-evidence, NOT a distributed ledger. No network.
 - Audit is heuristic — a clean scan is not a guarantee. State residual risk.
 - Minimal ≠ untested. Every module gets at least one test.
+- On Windows the skill dir (C:) and vault (D:) are on different drives —
+  scripts use `_rel_or_abs` for cross-drive paths. See
+  `references/windows-operations.md` for junction creation + consent-gate gotchas.
+- Never bundle `rm -rf` with other steps in one terminal call — Hermes consent
+  gate blocks it. Split into separate calls.
 
 ## Verification
 - `proj_gen.py` output builds/runs.
