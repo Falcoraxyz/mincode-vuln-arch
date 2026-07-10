@@ -1,8 +1,8 @@
 ---
-chain_prev: 6d415e42d2dcfb586c6fe0dc606cf33d9af60cecc33b5a8cf52f9baf033699a1
-chain_hash: 9d8d45dad0d8e4b35b967a5b6871765406521a1808af81f7a7a6aeb430864bd1
-chain_ts: 2026-07-10T17:53:54.117442+00:00
+chain_prev: 4c30efb87e517c170c26525e37de496c111c8bddb2414fb1c1fa9e9b137bcd96
+chain_hash: d39b247e89e1ba24ae04825fcb9b62a9a5c2e9a26862cc469794f8f58ab06743
+chain_ts: 2026-07-10T17:59:48.670332+00:00
 ---
 
 # Template-demo
-Clean structure.
+Clean structure. CWE-78 noted in samples.

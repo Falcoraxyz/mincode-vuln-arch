@@ -13,3 +13,6 @@ Thumbs.db
 
 # chain signing key (NEVER commit)
 ._chain/.key
+
+# auto-generated MOC (regenerate with vault_index.py)
+vault/Index.md

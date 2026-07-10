@@ -20,11 +20,13 @@ mincode-vuln-arch/
   SKILL.md            # Hermes skill: full workflow
   scripts/
     proj_gen.py       # minimal project scaffold
-    audit.py          # heuristic vuln audit
+    audit.py          # heuristic vuln audit (CWE + A-F grade)
     sample_repo.py     # mine clean architecture from a repo
-    hashchain.py       # local hash-chain for vault notes
+    hashchain.py       # local HMAC-signed hash-chain for vault notes
+    vault_index.py     # Obsidian MOC / wikilink index generator
   vault/              # Obsidian vault (hash-chained notes)
     ._chain/manifest.jsonl
+    Index.md          # auto-generated Map of Content
 ```
 
 ## Install (as Hermes skill)
@@ -41,6 +43,7 @@ python scripts/audit.py myapp
 python scripts/sample_repo.py <repo_path_or_url>
 python scripts/hashchain.py append "vault/Audit-myapp.md"
 python scripts/hashchain.py verify
+python scripts/vault_index.py --vault vault   # regenerate MOC
 ```
 
 ## Architecture decision table (optimal + stable + newest usable)

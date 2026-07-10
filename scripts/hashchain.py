@@ -87,18 +87,21 @@ def _rel_or_abs(note_path, v):
 def append(note_path, v):
     key = _load_key(v)
     with open(note_path, encoding="utf-8") as f:
-        body = f.read()
+        raw = f.read()
+    # strip any existing frontmatter so we re-sign the clean body
+    body = raw
+    if body.startswith("---"):
+        body = body.split("---", 2)[-1].lstrip("\n")
     rows = read_manifest(v)
     prev = rows[-1]["chain_hash"] if rows else "GENESIS"
     ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
     # hash + sign the RAW body (frontmatter excluded) so verify can strip+replay
     h = sha256(prev + "|" + body)
     sig = sign(key, prev, body)
-    # write frontmatter (without chaining hash into itself)
-    if not body.startswith("---"):
-        front = (f"---\nchain_prev: {prev}\nchain_hash: {h}\nchain_ts: {ts}\n---\n\n")
-        with open(note_path, "w", encoding="utf-8") as f:
-            f.write(front + body)
+    # write fresh frontmatter (without chaining hash into itself)
+    front = (f"---\nchain_prev: {prev}\nchain_hash: {h}\nchain_ts: {ts}\n---\n\n")
+    with open(note_path, "w", encoding="utf-8") as f:
+        f.write(front + body)
     rows.append({"chain_hash": h, "prev": prev, "note": _rel_or_abs(note_path, v),
                  "ts": ts, "len": len(body), "sig": sig})
     write_manifest(v, rows)

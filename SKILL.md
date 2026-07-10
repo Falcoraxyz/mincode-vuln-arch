@@ -81,6 +81,15 @@ Use `scripts/hashchain.py append <vault_note_path>`.
 - Verification: `hashchain.py verify` replays manifest, fails on any mismatch or
   signature error.
 
+### 4b. Vault MOC (Map of Content) — #7
+Use `scripts/vault_index.py [--vault <dir>]`.
+- Scans all `.md` notes, groups by prefix: `Audit-*` (Audits), `Template-*`
+  (Architecture Templates), `Common-*` (Cross-Project Learnings), rest → Notes.
+- Emits `Index.md` with Obsidian `[[wikilinks]]` + per-note CWE tags.
+- Auto cross-links notes sharing ≥1 CWE in a "Related by CWE" section.
+- Idempotent — rerun after every append to keep the vault navigable in Obsidian.
+- Regenerate MOC as part of the post-audit / post-mine workflow.
+
 ### 5. Persist to permanent memory
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,
   user prefs). NOT task progress. Use the `memory` tool.
