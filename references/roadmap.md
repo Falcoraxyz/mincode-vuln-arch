@@ -21,12 +21,10 @@ Order of operations per item:
 ## Done (original 10 + second round)
 #1 dep CVE (pip-audit) · #2 CWE+grade · #3 HMAC chain · #4 snippet · #5 gen_tests
 · #6 auto-git · #7 MOC · #8 cross-learn · #9 LLM review · #10 living arch table
-· #1b CI gate (gen_ci.py) · #3b multi-language audit · #4b SARIF export
+· #1b CI gate (gen_ci.py) · #2b test-execution gate (audit.py --run-tests)
+· #3b multi-language audit · #4b SARIF export · #8b assertion-aware gen_tests
 
 ## Pending backlog (from the second ideation pass)
-- #2 **Test-execution gate** — `audit.py --run-tests` actually runs gen_tests
-  output and folds pass/fail into the grade. (Currently tests are generated but
-  never executed as a gate.)
 - #5 **Local LLM** — `llm_review.py` should auto-detect Ollama / llama.cpp
   endpoints so it works offline (no OPENAI_API_KEY). Matches the local-first
   philosophy.
@@ -34,8 +32,6 @@ Order of operations per item:
   findings since the last audit of the same project (not just integrity verify).
 - #7 **HTML report** — `audit.py --report out.html` with severity colours +
   CWE links + grade badge, for human-readable output.
-- #8 **Assertion upgrade** — gen_tests emits a basic assertion from type hints /
-  return type instead of an empty smoke body.
 - #9 **Arch auto-apply** — when `sample_repo.py` flags a missing SKILL.md table
   row, offer to append it directly (now it only suggests).
 - #10 **Config file** — `mincode.toml` for threshold / vault path / model /
@@ -44,3 +40,14 @@ Order of operations per item:
 ## Repo presentation (done)
 README rewritten with badges + feature table + how-it-works diagram; LICENSE
 Apache-2.0; GitHub description + topics set. Keep README in sync after features.
+
+## Regression lesson captured this round (audit.py edit discipline)
+When editing `audit.py`'s `main()`, the per-finding loop BODY
+(`cwes.add(cwe)` + `print(f"[{sev}] ...")`) is easy to accidentally delete during
+a larger patch (e.g. while changing the exit logic). Symptom: findings still
+computed and graded, but **nothing prints** and the `CWEs:` line comes out empty
+— yet the gate still fails on HIGH. Always keep the `for sev, fp, ln, desc, cwe,
+snip in findings:` loop with both `cwes.add(cwe)` and the `print`, separate from
+the `high` count and the final `sys.exit`. Re-test with `audit.py <repo>
+--run-tests` on a deliberately broken test to confirm the `[MED]`/`[HIGH]` lines
+AND the `CWEs:` set actually print.

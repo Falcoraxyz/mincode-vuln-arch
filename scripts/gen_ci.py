@@ -30,13 +30,19 @@ jobs:
       - name: Generate smoke tests
         run: python .mincode/gen_tests.py .
       - name: Vulnerability audit (gate)
-        run: python .mincode/audit.py . --sarif sarif.json --run-tests
+        run: python .mincode/audit.py . --sarif sarif.json --report audit-report.html --run-tests
         # audit.py exits 1 if any HIGH finding OR any smoke test fails -> CI fails.
       - name: Upload SARIF to code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: sarif.json
+      - name: Upload HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: audit-report.html
 """
 
 

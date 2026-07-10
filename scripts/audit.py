@@ -266,11 +266,68 @@ def run_tests(path):
     return total, failed, (total - failed if total else 0)
 
 
+SEV_COLOR = {"HIGH": "#e5484d", "MED": "#f5a623", "LOW": "#3b9eff"}
+
+
+def to_html(findings, scanned_path, grade, penalty, high, cwes):
+    """Render a self-contained HTML report (inline CSS, severity colors,
+    CWE links, grade badge). No external deps."""
+    rows = []
+    for sev, fp, ln, desc, cwe, snip in findings:
+        try:
+            uri = os.path.relpath(fp, scanned_path).replace(os.sep, "/")
+        except ValueError:
+            uri = fp
+        loc = f"{uri}:{ln}" if ln else uri
+        rows.append(
+            f"<tr><td><span class='badge' style='background:{SEV_COLOR.get(sev,'#888')}'>"
+            f"{sev}</span></td><td><code>{loc}</code></td>"
+            f"<td>{desc}</td>"
+            f"<td><a href='https://cwe.mitre.org/data/definitions/"
+            f"{cwe.replace('CWE-','')}.html' target='_blank'>{cwe}</a></td>"
+            f"<td><code>{snip}</code></td></tr>")
+    grade_color = {"A": "#2ecc71", "B": "#7bd13b", "C": "#f5a623",
+                   "D": "#e67e22", "E": "#e5484d", "F": "#c0392b"}.get(grade, "#888")
+    cwe_list = ", ".join(sorted(cwes)) if cwes else "—"
+    html = f"""<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>mincode audit report</title>
+<style>
+ body {{ font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 2rem;
+   background: #fafafa; color: #222; }}
+ h1 {{ margin-bottom: .2rem; }}
+ .meta {{ color: #666; margin-bottom: 1.5rem; }}
+ .grade {{ display: inline-block; padding: .3rem .9rem; border-radius: 6px;
+   color: #fff; font-weight: 700; font-size: 1.2rem; background: {grade_color}; }}
+ table {{ border-collapse: collapse; width: 100%; background: #fff;
+   box-shadow: 0 1px 3px rgba(0,0,0,.1); }}
+ th, td {{ text-align: left; padding: .6rem .8rem; border-bottom: 1px solid #eee;
+   vertical-align: top; font-size: .9rem; }}
+ th {{ background: #f3f3f3; }}
+ code {{ background: #f4f4f4; padding: .1rem .3rem; border-radius: 3px; }}
+ .badge {{ color: #fff; padding: .15rem .5rem; border-radius: 4px; font-size: .75rem;
+   font-weight: 700; }}
+ a {{ color: #3b9eff; text-decoration: none; }}
+</style></head><body>
+<h1>🐦 mincode vulnerability audit</h1>
+<div class="meta">scanned: <code>{os.path.abspath(scanned_path)}</code></div>
+<div class="grade">{grade}</div>
+<p class="meta">penalty {penalty} · {high} HIGH · {len(findings)-high} other ·
+CWEs: {cwe_list}</p>
+<table>
+<tr><th>Severity</th><th>Location</th><th>Finding</th><th>CWE</th><th>Snippet</th></tr>
+{''.join(rows)}
+</table>
+</body></html>"""
+    return html
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("project")
     ap.add_argument("--sarif", metavar="FILE", help="write SARIF 2.1.0 to FILE")
+    ap.add_argument("--report", metavar="FILE", help="write an HTML report to FILE")
     ap.add_argument("--run-tests", action="store_true",
                     help="execute generated smoke tests and fold failures into the grade")
     a = ap.parse_args()
@@ -314,6 +371,11 @@ def main():
     g, penalty = grade(findings)
     print(f"---\n{high} HIGH, {len(findings)-high} other | CWEs: {', '.join(sorted(cwes))}")
     print(f"GRADE: {g}  (penalty {penalty})")
+    if a.report:
+        html = to_html(findings, path, g, penalty, high, cwes)
+        with open(a.report, "w", encoding="utf-8") as f:
+            f.write(html)
+        print(f"[report] wrote {a.report}")
     # gate: HIGH always fails; with --run-tests, any test failure also fails
     blocked = high or (a.run_tests and failed_count > 0)
     sys.exit(1 if blocked else 0)

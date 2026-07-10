@@ -25,6 +25,30 @@ subprocess per file, `cwd=root`, `PYTHONPATH=root` → parse `Ran N test` and
 `FAILED (failures=M, errors=K)` to compute pass/fail. Copy this wherever you
 need to execute generated tests.
 
+## Test file must call `unittest.main()` (or the run is silent)
+A `tests/<mod>_test.py` that only defines `class TestX(unittest.TestCase)` and
+`from src import mod` but has **no `if __name__ == "__main__": unittest.main()`**
+produces ZERO output when run directly (`RC=0`, empty stdout/stderr) — so
+`run_tests()` sees no `Ran N test` line and counts it as 0 tests, silently
+"passing". Always emit the `unittest.main()` runner (gen_tests does). When
+hand-writing a fixture test to exercise `audit.py --run-tests`, remember the
+runner line or the gate will vacuously pass.
+
+## Assertion-aware generation (#8)
+`gen_tests.py` reads each function's **return annotation** via `ast` and emits a
+*meaningful* stub, not a pass-through smoke body:
+- Typed dummy args from the signature: `int→0`, `str→""`, `list→[]`,
+  `dict→{}`, `tuple→()`, `bool→False`, `bytes→b""`, `set→set()`, else `None`.
+- `assert isinstance(result, <ret_type>)` when the return annotation is a simple
+  name (e.g. `int`, `str`); otherwise `assert result is not None` (with the
+  expected return type in a comment) — covers `List[int]`, `Optional[str]`, etc.
+- Classes: instantiate with typed dummy ctor args + `isinstance(obj, Cls)` +
+  `hasattr(obj, <public_method>)` per public method.
+
+This makes `audit.py --run-tests` actually catch a wrong return type / broken
+computation (e.g. `add` returning `str` fails `isinstance(result, int)` → MED
+CWE-1120, grade drop, gate fails) instead of passing through.
+
 ## Self-scan false positives
 `audit.py`'s regexes for `eval(` / `exec(` match the *literal pattern-definition
 strings* inside `audit.py` itself. So when you audit a repo that contains the

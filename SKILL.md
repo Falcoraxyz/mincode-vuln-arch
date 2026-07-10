@@ -82,6 +82,9 @@ Use `scripts/audit.py <project_path>`.
   (one rule per CWE, `security-severity` per level) so findings surface in GitHub
   code scanning. The CI gate (#1) uploads it automatically via
   `github/codeql-action/upload-sarif`.
+- **HTML report (#7):** `audit.py <project> --report out.html` emits a
+  self-contained HTML report (inline CSS, severity-colored badges, CWE mitre
+  links, A–F grade badge). The CI gate (#1) uploads it as a build artifact.
 - **CWE tagging + grade (#2):** every finding carries a CWE id (CWE-78,
   CWE-502, …); the project gets an A–F grade from a severity-weighted penalty
   (HIGH=10, MED=3, LOW=1). Grade prints with the CWE set for triage.
