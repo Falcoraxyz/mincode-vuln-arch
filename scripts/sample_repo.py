@@ -9,7 +9,7 @@ Judges by STRUCTURE only (human or AI-authored both fine):
  - no obvious dead deps
 Writes [[Template-<name>]] note to vault + prints a reusable snippet.
 """
-import os, sys, subprocess, argparse, json, datetime, ast
+import os, sys, subprocess, argparse, json, datetime, ast, re
 
 SKIP = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "dist", "build")
 GOD_LINES = 400
@@ -102,6 +102,53 @@ def extract_snippets(path):
     return out
 
 
+def detect_stack_hints(path):
+    """Best-effort stack detection from filenames + dep manifests."""
+    hints = set()
+    markers = {
+        "FastAPI": ("fastapi", "main.py", "app.py"),
+        "Web API": ("routes", "views", "controller"),
+        "CLI": ("__main__.py", "argparse", "click"),
+        "SQLite": ("sqlite", ".db", ".sqlite"),
+        "Data/ETL": ("pandas", "etl", "transform"),
+        "Frontend": ("vite", "svelte", "package.json", "index.ts"),
+        "Storage": ("models", "schema", "repository"),
+        "Long-running svc": ("supervisor", "worker", "daemon"),
+    }
+    text = " ".join(os.listdir(path)).lower()
+    for dp, dn, fn in os.walk(path):
+        if any(s in dp.split(os.sep) for s in SKIP):
+            continue
+        for name in fn:
+            low = name.lower()
+            text += " " + low
+            if low in ("requirements.txt", "pyproject.toml", "package.json"):
+                try:
+                    text += " " + open(os.path.join(dp, name), errors="ignore").read().lower()
+                except Exception:
+                    pass
+    for stack, keys in markers.items():
+        if any(k in text for k in keys):
+            hints.add(stack)
+    return sorted(hints)
+
+
+def suggest_arch_table(path, skill_md):
+    """Compare detected stacks against the Architecture Decision table in SKILL.md.
+    Returns (detected_stacks, missing_stacks, update_available: bool)."""
+    detected = detect_stack_hints(path)
+    # parse existing table rows: '| Stack | Pick | Why |'
+    rows = []
+    if os.path.exists(skill_md):
+        for line in open(skill_md, encoding="utf-8"):
+            m = re.match(r"\|\s*([A-Za-z /]+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|", line)
+            if m and m.group(1).strip() not in ("Stack", "-"):
+                rows.append(m.group(1).strip())
+    covered = set(rows)
+    missing = [s for s in detected if s not in covered]
+    return detected, missing, bool(missing)
+
+
 def cleanliness(a):
     score = 0
     notes = []
@@ -124,12 +171,18 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repo")
     ap.add_argument("--vault")
+    ap.add_argument("--skill", default=None,
+                    help="path to SKILL.md for arch-table comparison (default: skill dir SKILL.md)")
     a = ap.parse_args()
     path, cloned = clone_or_use(a.repo)
     info = analyze(path)
     verdict, notes = cleanliness(info)
     name = os.path.basename(path.rstrip("/"))
     snippets = extract_snippets(path)
+    # #10 living arch table: compare detected stacks vs SKILL.md decision table
+    skill_md = a.skill or os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "SKILL.md")
+    detected, missing, update_avail = suggest_arch_table(path, skill_md)
     snippet = (
         f"# Template-{name}\n"
         f"source: {a.repo}\nverdict: {verdict}\n"
@@ -141,6 +194,11 @@ def main():
         f"\n## Notes\n- " + ("; ".join(notes) if notes else "clean structure") + "\n"
         f"\n## Reusable snippets ({len(snippets)})\n" +
         ("".join(f"- `{f}`: `{s}`\n" for f, s in snippets) if snippets else "- _no public symbols extracted_\n")
+        + f"\n## Arch suggestions (#10)\n"
+        f"- detected stacks: {', '.join(detected) or '_none_'}\n"
+        + (f"- **UPDATE SKILL.md**: missing rows for: {', '.join(missing)}\n"
+           f"  add to Architecture Decision table so future scaffolds use them.\n"
+           if update_avail else "- arch table already covers detected stacks ✓\n")
     )
     print(snippet)
     # write to vault via resolve_vault (consistent with hashchain.py)

@@ -114,6 +114,36 @@ Use `scripts/cross_learn.py [--vault <dir>]`.
   "Suggested guardrails" (CWEs seen in ≥2 projects = systemic → add to CI gate).
 - The MOC auto-links it under "Cross-Project Learnings", so the KB self-improves
   as more audits land. Rerun after every audit.
+
+### 5c. LLM-assisted code review — #9
+Use `scripts/llm_review.py <project> [--model <name>]`.
+- Sends source files (excludes `tests/`) to an OpenAI-compatible chat endpoint
+  and asks the model to flag logic bugs / authz / TOCTOU / injection-via-data /
+  dead code that the heuristic audit cannot catch.
+- Requires `OPENAI_API_KEY` (optional `OPENAI_BASE_URL`, `OPENAI_MODEL`); if unset
+  it prints a notice and exits 0 — the heuristic audit still applies. Stdlib only
+  (urllib), no SDK dependency.
+- Writes `[[Audit-<project>-llm-<date>]]` to the vault. Use after `audit.py` to
+  cover the blind spots regex misses. Network + key needed; not for offline use.
+
+### 2b. Living architecture table — #10
+`sample_repo.py` now auto-detects stacks in a mined repo (CLI, Web API, FastAPI,
+SQLite, Frontend, Data/ETL, Storage, Long-running svc) and compares them against
+the **Architecture Decision table** in this SKILL.md.
+- If a detected stack has no table row, the `Template-*` note gets an
+  `## Arch suggestions (#10)` block: "UPDATE SKILL.md: missing rows for: …".
+- Add the missing row so future scaffolds pick the optimal/stable/newest stack.
+  The table is a living doc — evolve it as stacks change.
+
+## Gotchas
+Operational lessons — full detail in `references/gotchas.md`:
+- Chain ONLY hand-authored notes (`Audit-*`/`Template-*`). `vault_index.py` and
+  `cross_learn.py` outputs (`Index.md`, `Common-Mistakes.md`) are auto-generated —
+  regenerate them AFTER chaining, never append them (false TAMPER on verify).
+- Run generated tests with `python tests/<mod>_test.py` (unittest discover returns
+  0 in this Windows env).
+- To relocate the skill: directory-junction the Hermes skill dir to this repo via
+  `cmd /c mklink /J` (bash `cmd //c` strips quotes and fails silently).
 - **Deployment gotchas** (Windows junction relocation, cross-drive relpath, unittest
   direct-run, hashchain re-sign frontmatter): see `references/windows-deployment.md`.
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,
@@ -127,6 +157,7 @@ so the KB self-heals and grows. Recommend daily/weekly.
 ## Architecture Decision table (optimal+stable+newest usable)
 | Stack | Pick | Why |
 |-------|------|-----|
+| CLI | stdlib + argparse/click, single `main()` entry, modules by verb | zero deps, minimal |
 | CLI / small tool | stdlib + argparse, single `main()` entry, modules by verb | zero deps, minimal |
 | Web API | FastAPI (async, typed) OR stdlib `http.server` if tiny | FastAPI stable+modern; stdlib if no dep wanted |
 | Data / ETL | Python modules + pydantic for schema | typed, minimal boilerplate |

@@ -26,6 +26,7 @@ mincode-vuln-arch/
     hashchain.py       # local HMAC-signed hash-chain for vault notes
     vault_index.py     # Obsidian MOC / wikilink index generator
     cross_learn.py     # aggregate recurring CWE into Common-Mistakes.md
+    llm_review.py      # LLM-assisted review for logic flaws (OpenAI-compatible)
   vault/              # Obsidian vault (hash-chained notes)
     ._chain/manifest.jsonl
     Index.md          # auto-generated Map of Content
@@ -43,8 +44,8 @@ Set `OBSIDIAN_VAULT_PATH` in `%HERMES_HOME%\.env` to point at `vault/`.
 python scripts/proj_gen.py myapp --path .      # git init + scaffold-<date> tag
 python scripts/gen_tests.py myapp          # smoke tests from src/
 python scripts/audit.py myapp
-python scripts/sample_repo.py <repo_path_or_url>
-python scripts/hashchain.py append "vault/Audit-myapp.md"
+python scripts/sample_repo.py <repo_path_or_url>   # + living arch-table suggestions
+python scripts/llm_review.py myapp                  # optional: LLM logic-flaw review (needs OPENAI_API_KEY)
 python scripts/hashchain.py verify
 python scripts/vault_index.py --vault vault   # regenerate MOC
 python scripts/cross_learn.py --vault vault   # aggregate recurring CWE
