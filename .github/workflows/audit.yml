@@ -22,7 +22,7 @@ jobs:
           git config --global user.name  "mincode CI"
       - name: Smoke test the toolkit against a generated clean project
         run: |
-          python mincode.py gen demo --path /tmp/demo
+          python mincode.py gen demo --path /tmp
           python mincode.py audit /tmp/demo --no-vault --sarif audit.sarif
           python mincode.py tests /tmp/demo
       - name: Verify hash-chain round-trip
