@@ -87,31 +87,25 @@ export OBSIDIAN_VAULT_PATH="$PWD/vault"   # optional, for vault output
 
 ## 🔧 Usage
 
+**Single entrypoint (agent-agnostic — no Hermes / Obsidian needed):**
+
 ```bash
-# 1. Scaffold a minimal modular project (auto git + tag)
-python scripts/proj_gen.py myapp --path .
-
-# 2. Generate smoke tests from src/ (zero-dep unittest)
-python scripts/gen_tests.py myapp
-
-# 3. Audit for vulnerabilities (HIGH blocks "done")
-python scripts/audit.py myapp
-
-# 4. Mine clean architecture from any repo (URL or local path)
-python scripts/sample_repo.py <repo_url_or_path>
-
-# 5. Optional: LLM review for logic flaws (needs OPENAI_API_KEY)
-python scripts/llm_review.py myapp
-
-# 5b. Generate CI gate (fails on any HIGH finding)
-python scripts/gen_ci.py --path myapp
-
-# 6. Persist + harden the knowledge vault
-python scripts/hashchain.py append "vault/Audit-myapp.md"
-python scripts/hashchain.py verify
-python scripts/vault_index.py --vault vault     # regenerate MOC
-python scripts/cross_learn.py --vault vault     # aggregate recurring CWE
+python mincode.py gen myapp --path .        # 1. scaffold (auto git + tag)
+python mincode.py tests myapp               # 2. typed smoke tests
+python mincode.py audit myapp --no-vault    # 3. vuln audit (HIGH blocks "done")
+python mincode.py mine <repo_url_or_path>   # 4. mine clean architecture
+python mincode.py llm myapp --no-vault      # 5. LLM review (skips if no backend)
+python mincode.py ci myapp                  # 5b. generate CI gate
+python mincode.py vault verify              # 6. verify hash-chain
+python mincode.py moc                       #    rebuild Obsidian MOC
+python mincode.py learn                     #    aggregate recurring CWE
+python mincode.py init myapp                # one-shot: mincode.toml + CI into a repo
 ```
+
+`--no-vault` skips the vault note (results still print / SARIF / HTML). Vault defaults
+to `./mincode-vault` when `OBSIDIAN_VAULT_PATH` / `--vault` / `mincode.toml` are unset.
+
+**Direct scripts (also fine):** `python scripts/audit.py myapp`, `python scripts/gen_tests.py myapp`, …
 
 ### Example audit output
 ```

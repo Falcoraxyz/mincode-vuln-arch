@@ -51,6 +51,9 @@ def detect_backend(model, api_key, base_url):
 
 
 def resolve_vault(explicit):
+    """Return vault dir, or None if none configured (caller skips write).
+    Precedence: --vault > $HERMES_HOME/.env OBSIDIAN_VAULT_PATH > $OBSIDIAN_VAULT_PATH
+    > mincode.toml [vault].path > ./mincode-vault (project-local, agent-agnostic)."""
     if explicit:
         return explicit
     env = os.path.join(os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes")), ".env")
@@ -61,7 +64,13 @@ def resolve_vault(explicit):
                     return line.strip().split("=", 1)[1]
     except Exception:
         pass
-    return os.environ.get("OBSIDIAN_VAULT_PATH") or os.path.expanduser("~/Documents/Obsidian Vault")
+    if os.environ.get("OBSIDIAN_VAULT_PATH"):
+        return os.environ["OBSIDIAN_VAULT_PATH"]
+    cfg_path = config.load_config().get("vault", {}).get("path")
+    if cfg_path:
+        return cfg_path
+    # default: project-local vault (works anywhere, no Obsidian/Hermes needed)
+    return os.path.join(os.getcwd(), "mincode-vault")
 
 
 def collect(path):
@@ -126,7 +135,8 @@ def review(codeblock, model, api_key, base_url):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project")
-    ap.add_argument("--vault")
+    ap.add_argument("--vault", default=None, help="vault dir (default: OBSIDIAN_VAULT_PATH or ./mincode-vault)")
+    ap.add_argument("--no-vault", action="store_true", help="skip writing the vault note (results still print)")
     ap.add_argument("--model", default=None, help="model name (else OPENAI_MODEL / config / gpt-4o-mini)")
     ap.add_argument("--backend", default=None,
                     help="explicit OpenAI-compatible base URL (overrides auto-detect)")
@@ -156,12 +166,15 @@ def main():
         f"source: {a.project}\nmodel: {model}\nbackend: {label}\nreviewed: {date}\n\n"
         f"## LLM review (#9)\n\n{result}\n"
     )
-    v = resolve_vault(a.vault)
-    os.makedirs(v, exist_ok=True)
-    np_ = os.path.join(v, f"Audit-{name}-llm-{date}.md")
-    with open(np_, "w") as f:
-        f.write(note)
-    print(f"[vault] wrote {np_}")
+    v = None if a.no_vault else resolve_vault(a.vault)
+    if v:
+        os.makedirs(v, exist_ok=True)
+        np_ = os.path.join(v, f"Audit-{name}-llm-{date}.md")
+        with open(np_, "w") as f:
+            f.write(note)
+        print(f"[vault] wrote {np_}")
+    else:
+        print("[vault] skipped (--no-vault)")
     print("---")
     print(result[:800])
 

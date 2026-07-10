@@ -19,9 +19,9 @@ MAX_SNIPPETS_PER_MOD = 4
 
 
 def resolve_vault(explicit):
-    """Read OBSIDIAN_VAULT_PATH from $HERMES_HOME/.env (consistent with hashchain.py),
-    then os.environ, then mincode.toml [vault] path, then default.
-    Do NOT rely on os.environ alone."""
+    """Return vault dir, or None if none configured (caller skips write).
+    Precedence: --vault > $HERMES_HOME/.env OBSIDIAN_VAULT_PATH > $OBSIDIAN_VAULT_PATH
+    > mincode.toml [vault].path > ./mincode-vault (project-local, agent-agnostic)."""
     if explicit:
         return explicit
     env = os.path.join(os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes")), ".env")
@@ -32,10 +32,12 @@ def resolve_vault(explicit):
                     return line.strip().split("=", 1)[1]
     except Exception:
         pass
+    if os.environ.get("OBSIDIAN_VAULT_PATH"):
+        return os.environ["OBSIDIAN_VAULT_PATH"]
     cfg_path = config.load_config().get("vault", {}).get("path")
     if cfg_path:
         return cfg_path
-    return os.environ.get("OBSIDIAN_VAULT_PATH") or os.path.expanduser("~/Documents/Obsidian Vault")
+    return os.path.join(os.getcwd(), "mincode-vault")
 
 
 def clone_or_use(target):
@@ -228,6 +230,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("repo")
     ap.add_argument("--vault")
+    ap.add_argument("--no-vault", action="store_true", help="skip writing the vault note (mining result still prints)")
     ap.add_argument("--skill", default=None,
                     help="path to SKILL.md for arch-table comparison (default: skill dir SKILL.md)")
     ap.add_argument("--apply-arch", action="store_true",
@@ -267,12 +270,15 @@ def main():
     )
     print(snippet)
     # write to vault via resolve_vault (consistent with hashchain.py)
-    v = resolve_vault(a.vault)
-    os.makedirs(v, exist_ok=True)
-    np_ = os.path.join(v, f"Template-{name}.md")
-    with open(np_, "w") as f:
-        f.write(snippet)
-    print(f"\n[vault] wrote {np_}")
+    v = None if a.no_vault else resolve_vault(a.vault)
+    if v:
+        os.makedirs(v, exist_ok=True)
+        np_ = os.path.join(v, f"Template-{name}.md")
+        with open(np_, "w") as f:
+            f.write(snippet)
+        print(f"\n[vault] wrote {np_}")
+    else:
+        print("\n[vault] skipped (--no-vault)")
     # also drop a reusable snippets file next to the repo (local only)
     if not cloned and snippets:
         sdir = os.path.join(path, "docs")

@@ -1,11 +1,12 @@
 ---
 name: mincode-vuln-arch
-description: >
+description: >-
   Generate minimal, modular, human-style code from scratch; audit every
   project for vulnerabilities; mine clean architecture patterns from real
   repos (human or AI-authored) as reusable templates; persist results into a
-  tamper-evident hash-chain Obsidian vault + permanent Hermes memory. Picks
-  the optimal/stable/newest usable architecture per stack.
+  tamper-evident local hash-chain vault (Obsidian optional). Zero external
+  dependencies. Agent-agnostic: usable from any AI agent / CLI via the single
+  `mincode` entrypoint, no Hermes or Obsidian required.
 category: software-development
 ---
 
@@ -22,6 +23,28 @@ knowledge base (Obsidian hash-chain vault) + Hermes memory. Architecture chosen
 - Modular: one responsibility per module/file. Clear public interface.
 - Audit every project before declaring done (vuln gate).
 - Output lands in vault as append-only hash-chained notes (tamper-evident, local, no network).
+
+## Agent-agnostic usage (no Hermes / Obsidian required)
+The toolkit is a plain zero-dependency Python package. Any AI agent or human can
+drive it through the single `mincode` entrypoint — no skill system, no Obsidian,
+no environment variables needed:
+
+```bash
+# from the repo root, or after copying mincode.py to PATH
+python mincode.py audit <project> --no-vault
+python mincode.py gen <project>          # scaffold
+python mincode.py tests <project>         # typed smoke tests
+python mincode.py mine <repo> --no-vault  # mine architecture
+python mincode.py llm <project> --no-vault # LLM review (skips if no backend)
+python mincode.py vault diff <project>    # regression vs last audit
+python mincode.py init <repo>             # scaffold mincode.toml + CI into a repo
+```
+
+- `--no-vault` makes every command skip the vault note (results still print / SARIF / HTML).
+- Vault defaults to `./mincode-vault` when `OBSIDIAN_VAULT_PATH` / `--vault` / `mincode.toml` are unset.
+- Optional `mincode.toml` (project root, walk-up, or `$HERMES_HOME/mincode.toml`) sets
+  `[vault]`, `[audit] skip_dirs + threshold`, `[llm] model + base_url`. See `mincode.toml.example`.
+- No hardcoded paths — runs from any OS / cwd.
 
 ## Workflow (run in order)
 
@@ -252,6 +275,18 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
   `high`/`cwes`). Calling before grade is computed yields a wrong badge/penalty.
   The function reads `findings` + the computed scalars only — never recompute
   grade inside it. `to_sarif()`/`to_html()` are the reference shapes.
+- **Adding a `re`/`json`/`subprocess`-using function to an existing script:**
+  the import line is parsed, not executed, so a missing `import re` surfaces only
+  at RUNTIME (`NameError: name 're' is not defined`). When you add a function that
+  uses a stdlib module the file didn't previously need (e.g. `hashchain.py diff`
+  added `re.compile`), ADD THE IMPORT at the same time. Verify by actually
+  running the new subcommand once. (`config-loader.md` covers the mincode-specific
+  wiring gotchas behind `#10`.)
+- **Shared-module import ordering:** any script that does `import config`
+  (the skill's `scripts/config.py`) MUST `sys.path.insert(0, dirname(abspath(__file__)))`
+  BEFORE the `import config` line. Putting `import config` at the top of the file
+  (before the path hack) raises `ModuleNotFoundError` when the script runs from a
+  different cwd — exactly what happens in CI (scripts copied to `.mincode/`).
 - **Verifying `--run-tests` with a hand-written fixture:** the test file MUST end
   with `if __name__ == "__main__": unittest.main()` AND be runnable via
   `from src import x` (needs PYTHONPATH=root, which `run_tests` injects). A file
@@ -291,6 +326,7 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - Vault note links render; memory entry present.
 
 ## References
+- `references/config-loader.md` — mincode-specific wiring gotchas for `config.py` (zero-dep TOML). The loader itself lives in the `stdlib-toml-config` skill; this file covers `import re`/`sys.path.insert` regressions + vault-path precedence. Read before touching config wiring.
 - `references/roadmap.md` — **iteration workflow ("oke" loop) + pending backlog.** Read this FIRST when asked to add the next improvement.
 - `references/audit-and-chain.md` — audit regex gotchas, hash-chain design, and the vault env-var resolution rule. Read before touching the scanners.
 - `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.

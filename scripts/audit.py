@@ -336,6 +336,8 @@ def main():
     ap.add_argument("--threshold", type=int, default=None,
                     help="max HIGH findings allowed before the gate fails (0 = zero-tolerance)")
     ap.add_argument("--config", default=None, help="path to mincode.toml")
+    ap.add_argument("--vault", default=None, help="vault dir (ignored by audit; other commands use it)")
+    ap.add_argument("--no-vault", action="store_true", help="ignored by audit; other commands use it")
     a = ap.parse_args()
     cfg = config.load_config(a.config)
     threshold = a.threshold if a.threshold is not None else cfg["audit"]["threshold"]

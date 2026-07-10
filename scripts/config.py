@@ -13,7 +13,9 @@ Searched (in order) for the file:
 
 Schema (all keys optional):
     [vault]
-    path = "D:/mincode-vuln-arch/vault"
+    # optional — if unset, the toolkit defaults to ./mincode-vault (or the
+    # OBSIDIAN_VAULT_PATH env var); pass --vault to override per run.
+    path = "path/to/your/vault"
 
     [audit]
     skip_dirs = ["vendor", "build"]   # extra dirs to ignore
