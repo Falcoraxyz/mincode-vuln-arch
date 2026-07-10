@@ -1,0 +1,20 @@
+# mincode.toml — optional shared config for mincode-vuln-arch
+# Precedence: CLI flag > env var > this file > built-in default
+# Copy to your project root (or ~/mincode.tomn) and edit.
+
+[vault]
+# Where hash-chain notes + MOC get written.
+# Falls back to OBSIDIAN_VAULT_PATH (from $HERMES_HOME/.env) if unset.
+path = "D:/mincode-vuln-arch/vault"
+
+[audit]
+# Extra dirs to skip (in addition to .git, node_modules, __pycache__, tests, …)
+skip_dirs = ["vendor", "build", "legacy"]
+# Max HIGH findings allowed before the gate fails. 0 = zero-tolerance.
+threshold = 0
+
+[llm]
+# Used by llm_review.py when no --model / --backend / OPENAI_* env is set.
+# model = "gpt-4o-mini"          # cloud
+model = "qwen2.5-coder:7b"      # local Ollama example
+base_url = "http://localhost:11434/v1"   # local Ollama; omit for OpenAI cloud
