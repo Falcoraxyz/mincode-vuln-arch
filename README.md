@@ -31,6 +31,7 @@ library (optional `bandit` / `pip-audit` / an LLM key deepen coverage).
 | 8 | **LLM review** | `llm_review.py` | OpenAI-compatible review for logic/authz/TOCTOU blind spots regex misses (optional key). |
 | 9 | **Living arch table** | `sample_repo.py` | Detects stacks in mined repos; flags missing rows in the SKILL.md decision table. |
 | 10 | **Auto-git** | `proj_gen.py` / `audit.py` | Tags `scaffold-<date>` / `audit-clean-<date>` — every green state is versioned. |
+| 11 | **CI gate** | `gen_ci.py` | Generates a GitHub Actions workflow that fails on any HIGH finding — audit is *enforced*, not just tagged. |
 
 ---
 
@@ -49,8 +50,9 @@ mincode-vuln-arch/
 │   ├── gen_tests.py         # smoke-test generation (ast, zero-dep)
 │   ├── hashchain.py         # HMAC-signed local hash-chain
 │   ├── vault_index.py       # Obsidian MOC / wikilink index
-│   ├── cross_learn.py       # cross-project CWE aggregation
-│   └── llm_review.py        # LLM-assisted logic-flaw review
+│   ├── cross_learn.py      # cross-project CWE aggregation
+│   ├── llm_review.py        # LLM-assisted logic-flaw review
+│   └── gen_ci.py           # generate GitHub Actions audit-gate (#1)
 └── vault/                   # Obsidian vault (hash-chained notes)
     ├── ._chain/manifest.jsonl   # hash-chain ledger (HMAC key gitignored)
     ├── Index.md             # auto-generated Map of Content
@@ -96,6 +98,9 @@ python scripts/sample_repo.py <repo_url_or_path>
 
 # 5. Optional: LLM review for logic flaws (needs OPENAI_API_KEY)
 python scripts/llm_review.py myapp
+
+# 5b. Generate CI gate (fails on any HIGH finding)
+python scripts/gen_ci.py --path myapp
 
 # 6. Persist + harden the knowledge vault
 python scripts/hashchain.py append "vault/Audit-myapp.md"
