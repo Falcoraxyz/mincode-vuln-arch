@@ -17,8 +17,10 @@ Thumbs.db
 # auto-generated MOC (regenerate with vault_index.py)
 vault/Index.md
 
-# build artifact (regenerate with: python build_pyz.py)
-mincode.pyz
+# build artifacts (wheel/sdist)
+build/
+dist/
+*.egg-info/
 
 # local vault default (created at runtime when no --vault / OBSIDIAN_VAULT_PATH)
 mincode-vault/

@@ -6,12 +6,13 @@ Bundles the toolkit into one runnable archive (Python 3.8+ stdlib `zipapp`):
     python mincode.pyz audit .     # runs anywhere, no pip, no install
 
 How it works:
-- `scripts/` is copied verbatim into the archive root (so `import config` works).
-- `mincode.py` is renamed to `__main__.py` (the zipapp entry point).
-- A shebang + pyz magic makes `./mincode.pyz` executable on Unix.
+- All scripts/*.py are copied FLAT to the archive root, so `import config`
+  (and every sibling script) resolves at the zip root.
+- scripts/cli.py becomes __main__.py (the zipapp entry point). It already knows
+  to treat its own dir as the scripts dir.
+- A shebang makes `./mincode.pyz` executable on Unix.
 
-Zero third-party deps. Output is cross-platform (Windows/Linux/macOS) as long as
-a Python 3.8+ interpreter is present.
+Zero third-party deps. Cross-platform (Windows/Linux/macOS) on Python 3.8+.
 """
 import os
 import shutil
@@ -20,23 +21,22 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SCRIPTS = os.path.join(HERE, "scripts")
-ENTRY = os.path.join(HERE, "mincode.py")
+CLI = os.path.join(SCRIPTS, "cli.py")
 OUT = os.path.join(HERE, "mincode.pyz")
 
 
 def main():
-    if not os.path.isdir(SCRIPTS):
-        raise SystemExit(f"scripts/ not found at {SCRIPTS}")
-    if not os.path.isfile(ENTRY):
-        raise SystemExit(f"mincode.py not found at {ENTRY}")
+    if not os.path.isfile(CLI):
+        raise SystemExit(f"scripts/cli.py not found at {CLI}")
 
     build = tempfile.mkdtemp(prefix="mincode_build_")
     try:
-        # 1. copy scripts/ -> <build>/scripts  (mincode.py resolves SCRIPTS = HERE/scripts)
-        shutil.copytree(SCRIPTS, os.path.join(build, "scripts"))
-        # 2. mincode.py -> __main__.py (zipapp entry)
-        shutil.copy(ENTRY, os.path.join(build, "__main__.py"))
-        # 3. reference config example
+        # flatten scripts/*.py -> <build>/  (import config resolves at zip root)
+        for fn in os.listdir(SCRIPTS):
+            if fn.endswith(".py") and not fn.startswith("__"):
+                shutil.copy(os.path.join(SCRIPTS, fn), os.path.join(build, fn))
+        # cli.py -> __main__.py (zipapp entry; it treats its dir as the scripts dir)
+        shutil.copy(CLI, os.path.join(build, "__main__.py"))
         ex = os.path.join(HERE, "mincode.toml.example")
         if os.path.isfile(ex):
             shutil.copy(ex, os.path.join(build, "mincode.toml.example"))

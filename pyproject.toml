@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mincode-vuln-arch"
+version = "1.0.0"
+description = "Minimal code generator + vuln auditor + architecture miner with a local HMAC-signed hash-chain vault. Zero external dependencies."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Falcoraxyz" }]
+keywords = ["security", "code-generation", "static-analysis", "architecture", "vulnerability", "minimal", "cli"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Topic :: Security",
+    "Environment :: Console",
+]
+
+[project.urls]
+Homepage = "https://github.com/Falcoraxyz/mincode-vuln-arch"
+Repository = "https://github.com/Falcoraxyz/mincode-vuln-arch"
+
+[project.scripts]
+mincode = "mincode_vuln_arch.cli:main"
+
+[tool.setuptools]
+package-dir = { "mincode_vuln_arch" = "scripts" }
+packages = ["mincode_vuln_arch"]

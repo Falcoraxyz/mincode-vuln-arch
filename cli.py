@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Repo-root wrapper: delegate to the mincode_vuln_arch.cli dispatcher.
 
-For direct use without install: `python mincode.py audit . --no-vault`.
-For install: `pip install .` exposes the `mincode` console script
-(mincode_vuln_arch.cli:main) which runs the same code.
+Kept for `python cli.py ...` invocations and as a secondary entry. The canonical
+dispatcher lives at scripts/cli.py (package mincode_vuln_arch.cli).
 """
 import os
 import sys

@@ -83,6 +83,15 @@ git clone https://github.com/Falcoraxyz/mincode-vuln-arch
 export OBSIDIAN_VAULT_PATH="$PWD/vault"   # optional, for vault output
 ```
 
+### As an installable package (any OS, global `mincode`)
+```bash
+pip install .          # or: uv pip install .   /   uvx --from . mincode
+mincode audit <project> --no-vault
+mincode --help
+```
+This exposes a global `mincode` command; the scripts are installed as the
+`mincode_vuln_arch` package. No third-party dependencies.
+
 ### Single-file (zero-install, any OS)
 ```bash
 python build_pyz.py                 # -> mincode.pyz (one self-contained file)
