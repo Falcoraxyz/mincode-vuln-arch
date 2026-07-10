@@ -158,7 +158,6 @@ so the KB self-heals and grows. Recommend daily/weekly.
 | Stack | Pick | Why |
 |-------|------|-----|
 | CLI | stdlib + argparse/click, single `main()` entry, modules by verb | zero deps, minimal |
-| CLI / small tool | stdlib + argparse, single `main()` entry, modules by verb | zero deps, minimal |
 | Web API | FastAPI (async, typed) OR stdlib `http.server` if tiny | FastAPI stable+modern; stdlib if no dep wanted |
 | Data / ETL | Python modules + pydantic for schema | typed, minimal boilerplate |
 | Frontend | Vite + vanilla TS or Svelte (no React overhead) if small | lightest modern |
@@ -191,6 +190,14 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
   uses `unittest.main`). `python -m unittest discover -s tests` can report 0
   tests in some envs due to loader path quirks — fall back to the direct file
   run or `python -m unittest tests.<mod>_test`. See `references/test-generation.md`.
+- **Living arch table (#10) label contract:** `sample_repo.py`'s
+  `detect_stack_hints()` keys MUST equal the Architecture Decision table row
+  names below EXACTLY. They currently drifted (`FastAPI`, `SQLite`, `Data/ETL`
+  in the script vs `Web API`, `Storage`, `Data / ETL` in the table) which made
+  mined repos false-flag "UPDATE SKILL.md" when no update was needed. If a repo
+  is flagged missing but the stack is already covered, FIX THE SCRIPT'S marker
+  KEY to match the table row — do NOT add a duplicate table row to silence it.
+  Keep one canonical row name per stack.
 - On Windows the skill dir (C:) and vault (D:) are on different drives —
   scripts use `_rel_or_abs` for cross-drive paths. See
   `references/windows-operations.md` for junction creation + consent-gate gotchas.
