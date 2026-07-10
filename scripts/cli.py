@@ -70,8 +70,14 @@ def _init(repo):
     os.makedirs(repo, exist_ok=True)
     toml_dst = os.path.join(repo, "mincode.toml")
     if not os.path.exists(toml_dst):
-        src = os.path.join(SCRIPTS, "mincode.toml.example")
-        if os.path.exists(src):
+        # example lives at the toolkit root (parent of scripts/) when installed;
+        # fall back to the scripts/ dir for pyz/dev.
+        candidates = [
+            os.path.join(os.path.dirname(SCRIPTS), "mincode.toml.example"),
+            os.path.join(SCRIPTS, "mincode.toml.example"),
+        ]
+        src = next((c for c in candidates if os.path.exists(c)), None)
+        if src:
             with open(src) as f:
                 content = f.read()
             with open(toml_dst, "w") as f:
@@ -79,7 +85,7 @@ def _init(repo):
             print(f"[init] wrote {toml_dst}")
     sys.path.insert(0, SCRIPTS)
     import runpy
-    sys.argv = ["gen_ci.py", repo]
+    sys.argv = ["gen_ci.py", "--path", repo]
     try:
         runpy.run_path(os.path.join(SCRIPTS, "gen_ci.py"), run_name="__main__")
     except SystemExit as e:

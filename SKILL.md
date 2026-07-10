@@ -8,7 +8,16 @@ description: >-
   dependencies. Agent-agnostic: usable from any AI agent / CLI via the single
   `mincode` entrypoint, no Hermes or Obsidian required.
 category: software-development
+license: Apache-2.0
 ---
+
+<!--
+Anthropic AgentSkills-compatible: frontmatter `name` matches this directory
+(`mincode-vuln-arch`) and `description` is present, so any AgentSkills-aware
+loader (Claude, Cline, custom) can pick up SKILL.md directly. The toolkit also
+ships an MCP server (scripts/mcp_server.py) and a `mincode` CLI for agents that
+prefer stdio tools or a shell entrypoint.
+-->
 
 # Minimal Code + Vuln Audit + Architecture Mining → Hash-Chain Vault
 

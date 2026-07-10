@@ -30,12 +30,21 @@ All 10 original improvement ideas shipped + 6 extra. Status snapshot.
 | 9 | Arch auto-apply | `sample_repo.py` (`--apply-arch`) | ✅ |
 | 10 | Config file | `config.py` + `mincode.toml` | ✅ |
 
-## Possible next ideas (not started)
-- [ ] **HTML report → Obsidian publish** or Markdown digest in vault
-- [ ] **`mincode.toml` schema validation** + example committed to repo
-- [ ] **PR bot**: comment SARIF/HTML summary on GitHub PRs
-- [ ] **Semgrep/trivy adapter** (optional, behind env flag) for deeper coverage
-- [ ] **Vault sync** (git-backed) for multi-machine teams
-- [ ] **Per-language test generation** (JS/Go/Rust) in `gen_tests.py`
-- [ ] **Arch table → scaffold template** auto-injection in `proj_gen.py`
+## Portability track (agent-agnostic) — all done
+| # | Idea | Deliverable | Status |
+|---|------|-------------|--------|
+| 1 | Vault optional | `--no-vault` in `llm_review.py`/`sample_repo.py`, default `./mincode-vault` | ✅ |
+| 2 | Single CLI `mincode` | `mincode.py` dispatcher + `scripts/cli.py` | ✅ |
+| 3 | AgentSkills spec | `SKILL.md` frontmatter + `references/agentskills-spec.md` | ✅ |
+| 4 | Path hardening | no hardcoded `D:/`, stdlib-only config loader | ✅ |
+| 5 | Zipapp single-file | `build_pyz.py` → `mincode.pyz` | ✅ |
+| 6 | Pip-installable | `pyproject.toml` (`mincode_vuln_arch` + `mincode` console script) | ✅ |
+| 7 | MCP server | `scripts/mcp_server.py` (zero-dep stdio JSON-RPC) | ✅ |
+| 8 | Docker image | *(optional — see notes)* | ⬜ |
+| 9 | `mincode init` | one-shot `mincode.toml` + CI scaffold | ✅ |
+| 10 | AGENT.md cheat-sheet | `AGENT.md` drop-in quick reference | ✅ |
+
+> The toolkit is now **fully portable**: AgentSkills, MCP, CLI, pip/uvx, and pyz
+> all wrap the same scripts. No Hermes or Obsidian required to run.
+
 - [ ] **Dashboard**: aggregate grade trend across all audited projects
