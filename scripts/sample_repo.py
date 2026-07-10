@@ -103,17 +103,21 @@ def extract_snippets(path):
 
 
 def detect_stack_hints(path):
-    """Best-effort stack detection from filenames + dep manifests."""
+    """Best-effort stack detection from filenames + dep manifests.
+
+    Marker KEYS must equal the Architecture Decision table row names in SKILL.md
+    EXACTLY (see Pitfalls/#10), so detected stacks match parsed table rows and no
+    false 'UPDATE SKILL.md' is raised. Canonical names:
+    CLI, Web API, Data / ETL, Frontend, Long-running svc, Storage.
+    """
     hints = set()
     markers = {
-        "FastAPI": ("fastapi", "main.py", "app.py"),
-        "Web API": ("routes", "views", "controller"),
         "CLI": ("__main__.py", "argparse", "click"),
-        "SQLite": ("sqlite", ".db", ".sqlite"),
-        "Data/ETL": ("pandas", "etl", "transform"),
+        "Web API": ("routes", "views", "controller", "fastapi", "main.py", "app.py"),
+        "Data / ETL": ("pandas", "etl", "transform"),
         "Frontend": ("vite", "svelte", "package.json", "index.ts"),
-        "Storage": ("models", "schema", "repository"),
         "Long-running svc": ("supervisor", "worker", "daemon"),
+        "Storage": ("sqlite", ".db", ".sqlite", "models", "schema", "repository"),
     }
     text = " ".join(os.listdir(path)).lower()
     for dp, dn, fn in os.walk(path):
@@ -138,10 +142,11 @@ def suggest_arch_table(path, skill_md):
     Returns (detected_stacks, missing_stacks, update_available: bool)."""
     detected = detect_stack_hints(path)
     # parse existing table rows: '| Stack | Pick | Why |'
+    # char class includes '-' so 'Long-running svc' matches a table row name.
     rows = []
     if os.path.exists(skill_md):
         for line in open(skill_md, encoding="utf-8"):
-            m = re.match(r"\|\s*([A-Za-z /]+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|", line)
+            m = re.match(r"\|\s*([A-Za-z /-]+?)\s*\|\s*(.+?)\s*\|\s*(.+?)\s*\|", line)
             if m and m.group(1).strip() not in ("Stack", "-"):
                 rows.append(m.group(1).strip())
     covered = set(rows)

@@ -185,18 +185,75 @@ def grade(findings):
     return GRADE_F, penalty
 
 
+SEV_TO_SARIF = {"HIGH": "error", "MED": "warning", "LOW": "note"}
+
+
+def to_sarif(findings, scanned_path, tool_name="mincode-audit"):
+    """Emit a SARIF 2.1.0 doc so findings integrate with GitHub code scanning."""
+    # one rule per unique CWE
+    rules = {}
+    rule_list = []
+    for sev, fp, ln, desc, cwe, snip in findings:
+        if cwe not in rules:
+            rid = cwe
+            rules[cwe] = len(rule_list)
+            rule_list.append({
+                "id": rid,
+                "name": cwe,
+                "shortDescription": {"text": desc},
+                "fullDescription": {"text": f"{desc} ({cwe})"},
+                "properties": {"security-severity": {"HIGH": "8.0", "MED": "5.0", "LOW": "2.0"}[sev]},
+            })
+    results = []
+    for sev, fp, ln, desc, cwe, snip in findings:
+        try:
+            uri = os.path.relpath(fp, scanned_path).replace(os.sep, "/")
+        except ValueError:
+            uri = fp
+        results.append({
+            "ruleId": cwe,
+            "level": SEV_TO_SARIF.get(sev, "warning"),
+            "message": {"text": f"{desc} [{cwe}]"},
+            "locations": [{
+                "physicalLocation": {
+                    "artifactLocation": {"uri": uri},
+                    "region": {"startLine": ln, "endLine": ln},
+                }
+            }],
+        })
+    doc = {
+        "version": "2.1.0",
+        "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+        "runs": [{
+            "tool": {"driver": {
+                "name": tool_name,
+                "version": "1.0",
+                "rules": rule_list,
+            }},
+            "results": results,
+        }],
+    }
+    return doc
+
+
 def main():
-    if len(sys.argv) < 2:
-        print("usage: audit.py <project_path>")
-        sys.exit(2)
-    path = sys.argv[1]
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("project")
+    ap.add_argument("--sarif", metavar="FILE", help="write SARIF 2.1.0 to FILE")
+    a = ap.parse_args()
+    path = a.project
     findings = scan(path) + run_bandit(path) + dep_scan(path)
     findings.sort(key=lambda x: {"HIGH": 0, "MED": 1, "LOW": 2}[x[0]])
+    if a.sarif:
+        doc = to_sarif(findings, path)
+        with open(a.sarif, "w", encoding="utf-8") as f:
+            json.dump(doc, f, indent=2)
+        print(f"[sarif] wrote {a.sarif} ({len(findings)} findings)")
     if not findings:
         print("AUDIT CLEAN — no findings. Grade: A")
-        # version the green state if this is a git repo
         try:
-            import datetime, subprocess
+            import datetime
             d = datetime.date.today().isoformat()
             subprocess.run(["git", "tag", f"audit-clean-{d}"],
                            cwd=path, capture_output=True, check=False)

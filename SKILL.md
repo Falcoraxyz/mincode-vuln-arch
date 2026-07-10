@@ -73,6 +73,10 @@ Use `scripts/audit.py <project_path>`.
   `Pipfile` / `poetry.lock`, runs `pip-audit` when available (network for the
   advisory DB), else emits a LOW "install pip-audit" notice. CVEs map to
   HIGH/MED/LOW by severity.
+- **SARIF output (#4):** `audit.py <project> --sarif out.sarif` emits SARIF 2.1.0
+  (one rule per CWE, `security-severity` per level) so findings surface in GitHub
+  code scanning. The CI gate (#1) uploads it automatically via
+  `github/codeql-action/upload-sarif`.
 - **CWE tagging + grade (#2):** every finding carries a CWE id (CWE-78,
   CWE-502, …); the project gets an A–F grade from a severity-weighted penalty
   (HIGH=10, MED=3, LOW=1). Grade prints with the CWE set for triage.
@@ -204,14 +208,14 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
   uses `unittest.main`). `python -m unittest discover -s tests` can report 0
   tests in some envs due to loader path quirks — fall back to the direct file
   run or `python -m unittest tests.<mod>_test`. See `references/test-generation.md`.
-- **Living arch table (#10) label contract:** `sample_repo.py`'s
-  `detect_stack_hints()` keys MUST equal the Architecture Decision table row
-  names below EXACTLY. They currently drifted (`FastAPI`, `SQLite`, `Data/ETL`
-  in the script vs `Web API`, `Storage`, `Data / ETL` in the table) which made
-  mined repos false-flag "UPDATE SKILL.md" when no update was needed. If a repo
-  is flagged missing but the stack is already covered, FIX THE SCRIPT'S marker
-  KEY to match the table row — do NOT add a duplicate table row to silence it.
-  Keep one canonical row name per stack.
+- **Living arch table (#10) label contract (RESOLVED):** `sample_repo.py`'s
+  `detect_stack_hints()` marker KEYS now equal the Architecture Decision table
+  row names below EXACTLY (canonical: `CLI`, `Web API`, `Data / ETL`,
+  `Frontend`, `Long-running svc`, `Storage`). The table-row regex also accepts
+  `-` so `Long-running svc` matches. This prevents false "UPDATE SKILL.md"
+  suggestions. If a future repo is flagged missing but the stack is already
+  covered, FIX THE SCRIPT'S marker KEY to match the table row — do NOT add a
+  duplicate table row to silence it. Keep one canonical row name per stack.
 - On Windows the skill dir (C:) and vault (D:) are on different drives —
   scripts use `_rel_or_abs` for cross-drive paths. See
   `references/windows-operations.md` for junction creation + consent-gate gotchas.
@@ -228,3 +232,4 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - `references/audit-and-chain.md` — audit regex gotchas, hash-chain design, and the vault env-var resolution rule. Read before touching the scanners.
 - `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.
 - `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
+- `references/ci-gate.md` — `gen_ci.py` workflow shape, `.mincode/` commit rule, and why relative paths only (no absolute Windows paths in generated YAML).
