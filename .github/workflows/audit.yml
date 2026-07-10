@@ -1,0 +1,22 @@
+name: audit
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Audit toolkit scripts
+        run: python mincode.py audit . --no-vault --sarif audit.sarif
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: audit.sarif
