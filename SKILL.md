@@ -57,6 +57,10 @@ Use `scripts/audit.py <project_path>`.
   deserialization, path traversal, weak crypto, shell=True, missing input
   validation, dependency pinning.
 - If `bandit` installed → run it too and merge findings.
+- **Dependency CVE scan (#1):** finds `requirements*.txt` / `pyproject.toml` /
+  `Pipfile` / `poetry.lock`, runs `pip-audit` when available (network for the
+  advisory DB), else emits a LOW "install pip-audit" notice. CVEs map to
+  HIGH/MED/LOW by severity.
 - Severity: HIGH / MED / LOW. Project blocked from "done" if any HIGH unresolved.
 - Writes `[[Audit-<project>-<date>]]` to vault.
 
@@ -64,8 +68,15 @@ Use `scripts/audit.py <project_path>`.
 Use `scripts/hashchain.py append <vault_note_path>`.
 - Computes sha256 of note body, links to previous note hash in chain manifest
   `<vault>/._chain/manifest.jsonl` (append-only, tamper-evident).
+- **HMAC signing (#3):** each entry is signed with a local key
+  `<vault>/._chain/.key` (auto-generated, 32 bytes). Verify checks both the
+  hash linkage AND the HMAC, so editing the manifest + note together is caught
+  (forged-resistant, not just tamper-evident). Key is per-vault; rotate with
+  `hashchain.py rotate-key`.
 - Each note gets frontmatter: `chain_prev`, `chain_hash`, `chain_ts`.
-- Verification: `hashchain.py verify` replays manifest, fails on any mismatch.
+- Commands: `append`, `verify`, `status`, `rotate-key`.
+- Verification: `hashchain.py verify` replays manifest, fails on any mismatch or
+  signature error.
 
 ### 5. Persist to permanent memory
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,

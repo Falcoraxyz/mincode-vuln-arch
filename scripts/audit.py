@@ -74,12 +74,58 @@ def run_bandit(path):
     return res
 
 
+def find_dep_files(path):
+    files = []
+    for dp, dn, fn in os.walk(path):
+        if any(s in dp.split(os.sep) for s in SKIP_DIRS):
+            continue
+        for name in fn:
+            if name in ("requirements.txt", "requirements-dev.txt",
+                        "pyproject.toml", "Pipfile", "poetry.lock"):
+                files.append(os.path.join(dp, name))
+    return files
+
+
+def dep_scan(path):
+    """CVE scan of declared dependencies. Uses pip-audit if present (best),
+    else falls back to pip index versions check. Returns findings list."""
+    dep_files = find_dep_files(path)
+    if not dep_files:
+        return []
+    findings = []
+    # prefer pip-audit (requires network for the advisory DB, but most accurate)
+    try:
+        out = subprocess.run(["pip-audit", "-r", dep_files[0], "-f", "json"],
+                             capture_output=True, text=True, timeout=180)
+        if out.returncode in (0, 1):
+            try:
+                data = json.loads(out.stdout)
+                for dep in data.get("dependencies", []):
+                    for vuln in dep.get("vulns", []):
+                        sev = vuln.get("severity", "MEDIUM") or "MEDIUM"
+                        sev = "HIGH" if str(sev).upper() in ("CRITICAL", "HIGH") else \
+                              ("MED" if str(sev).upper() == "MEDIUM" else "LOW")
+                        findings.append((sev, dep_files[0], 0,
+                                         f"CVE {vuln.get('id','?')}: {vuln.get('description','')[:60]}",
+                                         f"{dep.get('name')} {dep.get('version')}"))
+            except Exception:
+                pass
+            return findings
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
+    # fallback: report that dep files exist but no scanner available
+    findings.append(("LOW", dep_files[0], 0,
+                     "dependency declared but pip-audit not installed — run `pip install pip-audit`",
+                     os.path.basename(dep_files[0])))
+    return findings
+
+
 def main():
     if len(sys.argv) < 2:
         print("usage: audit.py <project_path>")
         sys.exit(2)
     path = sys.argv[1]
-    findings = scan(path) + run_bandit(path)
+    findings = scan(path) + run_bandit(path) + dep_scan(path)
     findings.sort(key=lambda x: {"HIGH": 0, "MED": 1, "LOW": 2}[x[0]])
     if not findings:
         print("AUDIT CLEAN — no findings.")

@@ -10,3 +10,6 @@ Thumbs.db
 
 # hermes internal
 .ok/
+
+# chain signing key (NEVER commit)
+._chain/.key
