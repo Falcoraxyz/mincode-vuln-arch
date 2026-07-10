@@ -22,6 +22,7 @@ mincode-vuln-arch/
     proj_gen.py       # minimal project scaffold
     audit.py          # heuristic vuln audit (CWE + A-F grade)
     sample_repo.py     # mine clean architecture from a repo
+    gen_tests.py       # generate smoke tests from src/ (ast, zero-dep)
     hashchain.py       # local HMAC-signed hash-chain for vault notes
     vault_index.py     # Obsidian MOC / wikilink index generator
   vault/              # Obsidian vault (hash-chained notes)
@@ -39,6 +40,7 @@ Set `OBSIDIAN_VAULT_PATH` in `%HERMES_HOME%\.env` to point at `vault/`.
 ## Usage
 ```bash
 python scripts/proj_gen.py myapp --path .
+python scripts/gen_tests.py myapp          # smoke tests from src/
 python scripts/audit.py myapp
 python scripts/sample_repo.py <repo_path_or_url>
 python scripts/hashchain.py append "vault/Audit-myapp.md"

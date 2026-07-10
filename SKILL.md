@@ -64,6 +64,12 @@ Use `scripts/audit.py <project_path>`.
 - **CWE tagging + grade (#2):** every finding carries a CWE id (CWE-78,
   CWE-502, …); the project gets an A–F grade from a severity-weighted penalty
   (HIGH=10, MED=3, LOW=1). Grade prints with the CWE set for triage.
+- **Test generation (#5):** `scripts/gen_tests.py <project>` parses `src/` with
+  `ast` (stdlib) and writes one smoke test per public function/class into
+  `tests/<module>_test.py` (skips existing). Default framework `unittest`
+  (stdlib, zero-dep) — run each with `python tests/<module>_test.py` or
+  `python -m unittest discover -s tests` from the project root. Fills the
+  "minimal ≠ untested" gap: every module gets at least a smoke test.
 - Severity: HIGH / MED / LOW. Project blocked from "done" if any HIGH unresolved.
 - Writes `[[Audit-<project>-<date>]]` to vault.
 
@@ -80,6 +86,10 @@ Use `scripts/hashchain.py append <vault_note_path>`.
 - Commands: `append`, `verify`, `status`, `rotate-key`.
 - Verification: `hashchain.py verify` replays manifest, fails on any mismatch or
   signature error.
+- **Re-append rule:** if a note was already chained and you edit it, you MUST
+  re-run `append` — it strips the stale frontmatter and re-signs the clean body.
+  Skipping this leaves a false TAMPER at #1 on `verify`. (See
+  `references/audit-and-chain.md`.)
 
 ### 4b. Vault MOC (Map of Content) — #7
 Use `scripts/vault_index.py [--vault <dir>]`.
