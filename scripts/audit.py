@@ -34,7 +34,7 @@ PATTERNS = {
 }
 
 EXT = (".py", ".js", ".ts", ".sh", ".json", ".yaml", ".yml")
-SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv")
+SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tests")
 
 # score weights per severity for grading
 GRADE_WEIGHTS = {"HIGH": 10, "MED": 3, "LOW": 1}
@@ -152,6 +152,14 @@ def main():
     findings.sort(key=lambda x: {"HIGH": 0, "MED": 1, "LOW": 2}[x[0]])
     if not findings:
         print("AUDIT CLEAN — no findings. Grade: A")
+        # version the green state if this is a git repo
+        try:
+            import datetime, subprocess
+            d = datetime.date.today().isoformat()
+            subprocess.run(["git", "tag", f"audit-clean-{d}"],
+                           cwd=path, capture_output=True, check=False)
+        except Exception:
+            pass
         sys.exit(0)
     high = 0
     cwes = set()

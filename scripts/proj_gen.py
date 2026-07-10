@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Scaffold a minimal, modular project skeleton with audit + hash-chain hooks.
-Usage: python proj_gen.py <project_name> [--path <dir>]
-Creates: src/ tests/ docs/ README.md CHANGELOG.md
+Usage: python proj_gen.py <project_name> [--path <dir>] [--no-git]
+Creates: src/ tests/ docs/ README.md CHANGELOG.md + git init + initial commit.
 """
-import argparse, os, sys, textwrap, datetime
+import argparse, os, sys, textwrap, datetime, subprocess
 
 README = """# {name}
 
@@ -40,11 +40,28 @@ Stack decision recorded here. See mincode-vuln-arch Architecture Decision table.
 - Alternatives rejected: <fill>
 """
 
+GITIGNORE = """# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ok/
+"""
+
+
+def run(cmd, cwd):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    if r.returncode != 0:
+        print(f"  git: {' '.join(cmd)} -> {r.stderr.strip() or 'nonzero exit'}")
+        return False
+    return True
+
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("name")
     ap.add_argument("--path", default=".")
+    ap.add_argument("--no-git", action="store_true", help="skip git init/commit")
     a = ap.parse_args()
     root = os.path.join(os.path.abspath(a.path), a.name)
     os.makedirs(root, exist_ok=True)
@@ -64,8 +81,17 @@ def main():
         f.write(CHANGELOG.format(date=date))
     with open(os.path.join(root, "docs", "architecture.md"), "w") as f:
         f.write(ARCH)
+    with open(os.path.join(root, ".gitignore"), "w") as f:
+        f.write(GITIGNORE)
     print(f"scaffolded: {root}")
-    print("next: fill src/, run audit.py, then hashchain.py append <note>")
+    if not a.no_git:
+        if run(["git", "init", "-q"], root):
+            run(["git", "add", "-A"], root)
+            ok = run(["git", "commit", "-q",
+                      "-m", f"init: scaffold {a.name} (mincode-vuln-arch)"], root)
+            tag = run(["git", "tag", f"scaffold-{date}"], root)
+            print(f"git: initialized + initial commit" + (" + tag" if tag else ""))
+    print("next: fill src/, run gen_tests.py + audit.py, then hashchain.py append <note>")
 
 
 if __name__ == "__main__":

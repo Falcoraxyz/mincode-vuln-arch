@@ -19,7 +19,7 @@ Hermes memory persistence.
 mincode-vuln-arch/
   SKILL.md            # Hermes skill: full workflow
   scripts/
-    proj_gen.py       # minimal project scaffold
+    proj_gen.py       # minimal project scaffold (auto-git, tags scaffold-<date>)
     audit.py          # heuristic vuln audit (CWE + A-F grade)
     sample_repo.py     # mine clean architecture from a repo
     gen_tests.py       # generate smoke tests from src/ (ast, zero-dep)
@@ -40,7 +40,7 @@ Set `OBSIDIAN_VAULT_PATH` in `%HERMES_HOME%\.env` to point at `vault/`.
 
 ## Usage
 ```bash
-python scripts/proj_gen.py myapp --path .
+python scripts/proj_gen.py myapp --path .      # git init + scaffold-<date> tag
 python scripts/gen_tests.py myapp          # smoke tests from src/
 python scripts/audit.py myapp
 python scripts/sample_repo.py <repo_path_or_url>

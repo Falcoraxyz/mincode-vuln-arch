@@ -31,7 +31,7 @@ knowledge base (Obsidian hash-chain vault) + Hermes memory. Architecture chosen
 - Scripts live in this skill's `scripts/` dir. Pass absolute paths.
 
 ### 1. Scaffold minimal modular project
-Use `scripts/proj_gen.py` or do it by hand. Standard skeleton:
+Use `scripts/proj_gen.py <name> [--path .] [--no-git]`. Standard skeleton:
 ```
 <project>/
   src/            # one module per concern, thin public API
@@ -43,6 +43,9 @@ Use `scripts/proj_gen.py` or do it by hand. Standard skeleton:
 ```
 - Pick architecture per stack from the **Architecture Decision** table below.
 - Do NOT add frameworks/libs unless required. Stdlib-first.
+- **Auto-git (#6):** `proj_gen.py` runs `git init` + initial commit and tags
+  `scaffold-<date>` (skip with `--no-git`). `audit.py` tags `audit-clean-<date>`
+  on a fully clean pass — every green state is versioned.
 
 ### 2. Mine clean architecture from sample repos
 Use `scripts/sample_repo.py <repo_path_or_url>`.
@@ -151,7 +154,7 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - **Running generated tests:** prefer `python tests/<mod>_test.py` (reliable,
   uses `unittest.main`). `python -m unittest discover -s tests` can report 0
   tests in some envs due to loader path quirks — fall back to the direct file
-  run or `python -m unittest tests.<mod>_test`.
+  run or `python -m unittest tests.<mod>_test`. See `references/test-generation.md`.
 - On Windows the skill dir (C:) and vault (D:) are on different drives —
   scripts use `_rel_or_abs` for cross-drive paths. See
   `references/windows-operations.md` for junction creation + consent-gate gotchas.
@@ -166,3 +169,5 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 
 ## References
 - `references/audit-and-chain.md` — audit regex gotchas, hash-chain design, and the vault env-var resolution rule. Read before touching the scanners.
+- `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.
+- `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
