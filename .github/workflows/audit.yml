@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Configure git (for scaffold auto-commit/tag)
+        run: |
+          git config --global user.email "ci@github.com"
+          git config --global user.name  "mincode CI"
       - name: Smoke test the toolkit against a generated clean project
         run: |
           python mincode.py gen demo --path /tmp/demo
