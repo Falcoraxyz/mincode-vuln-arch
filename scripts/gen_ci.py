@@ -29,11 +29,9 @@ jobs:
           python-version: "3.11"
       - name: Generate smoke tests
         run: python .mincode/gen_tests.py .
-      - name: Run smoke tests
-        run: python -m unittest discover -s tests -v
       - name: Vulnerability audit (gate)
-        run: python .mincode/audit.py . --sarif sarif.json
-        # audit.py exits 1 if any HIGH finding -> CI fails.
+        run: python .mincode/audit.py . --sarif sarif.json --run-tests
+        # audit.py exits 1 if any HIGH finding OR any smoke test fails -> CI fails.
       - name: Upload SARIF to code scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3

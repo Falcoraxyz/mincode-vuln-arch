@@ -24,6 +24,7 @@ library (optional `bandit` / `pip-audit` / an LLM key deepen coverage).
 | 1 | **Scaffold** | `proj_gen.py` | Minimal modular skeleton (`src/ tests/ docs/`), stdlib-first. Auto `git init` + `scaffold-<date>` tag. |
 | 2 | **Audit** | `audit.py` | Heuristic vuln scan + optional `bandit`. CWE-tagged, A–F grade, dependency CVE scan (`pip-audit`). |
 | 2b | **SARIF export** | `audit.py` | `--sarif out.sarif` (2.1.0) for GitHub code scanning; auto-uploaded by the CI gate. |
+| 2c | **Test execution gate** | `audit.py` | `--run-tests` executes the smoke suite; failures lower grade + fail the gate (CWE-1120). |
 | 3 | **Mine architecture** | `sample_repo.py` | Extract clean module boundaries + reusable code snippets from any repo (human or AI-authored). |
 | 3b | **Multi-language audit** | `audit.py` | Heuristic scan across Python + JS/TS/Go/Rust/sh (polyglot rules), CWE-tagged. |
 | 4 | **Gen tests** | `gen_tests.py` | `ast`-based smoke-test generation — every module gets a test (zero-dep `unittest`). |

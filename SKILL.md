@@ -73,6 +73,11 @@ Use `scripts/audit.py <project_path>`.
   `Pipfile` / `poetry.lock`, runs `pip-audit` when available (network for the
   advisory DB), else emits a LOW "install pip-audit" notice. CVEs map to
   HIGH/MED/LOW by severity.
+- **Test execution gate (#2):** `audit.py --run-tests` runs the `gen_tests.py`
+  smoke suite (each `tests/*_test.py` via `unittest.main`) and folds any failure
+  into the grade as MED (CWE-1120). With `--run-tests`, the audit **fails the
+  gate** (exit 1) on test failure — "minimal ≠ untested" is now enforced, not
+  just generated. The CI gate (#1) runs `audit.py --run-tests`.
 - **SARIF output (#4):** `audit.py <project> --sarif out.sarif` emits SARIF 2.1.0
   (one rule per CWE, `security-severity` per level) so findings surface in GitHub
   code scanning. The CI gate (#1) uploads it automatically via
@@ -229,7 +234,19 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - Vault note links render; memory entry present.
 
 ## References
+- `references/roadmap.md` — **iteration workflow ("oke" loop) + pending backlog.** Read this FIRST when asked to add the next improvement.
 - `references/audit-and-chain.md` — audit regex gotchas, hash-chain design, and the vault env-var resolution rule. Read before touching the scanners.
 - `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.
 - `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
+
+## gen_ci.py pitfalls (CI gate #1b)
+- The workflow YAML must be **portable**: copy scripts into the target repo as
+  `.mincode/` and call them with a relative path (`python .mincode/audit.py .`).
+  Do NOT bake the absolute Hermes skill path into the YAML — it breaks on the
+  CI runner.
+- `.mincode/` and `.github/` **must be committed** (CI needs the scripts). The
+  generator deliberately does NOT gitignore `.mincode/`. If you re-run the
+  generator, remove any stale `.mincode/` line from `.gitignore` first.
+- `audit.py` exits 1 on any HIGH finding → the `audit-gate` job fails. SARIF is
+  uploaded with `if: always()` so scanning results survive a failed gate.
 - `references/ci-gate.md` — `gen_ci.py` workflow shape, `.mincode/` commit rule, and why relative paths only (no absolute Windows paths in generated YAML).

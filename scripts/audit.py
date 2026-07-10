@@ -64,7 +64,7 @@ EXT_LANG = {
     ".json": "poly", ".yaml": "yaml", ".yml": "yaml",
 }
 EXT = tuple(EXT_LANG.keys())
-SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tests")
+SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tests", ".mincode")
 
 
 def patterns_for(ext):
@@ -236,14 +236,58 @@ def to_sarif(findings, scanned_path, tool_name="mincode-audit"):
     return doc
 
 
+def run_tests(path):
+    """Run generated smoke tests. Returns (total, failed, passed).
+    A failed test lowers the grade and can fail the audit gate.
+    Runs each tests/<mod>_test.py directly (unittest.main) — reliable on Windows
+    where `unittest discover` can report 0 tests due to loader path quirks."""
+    tests_dir = os.path.join(path, "tests")
+    if not os.path.isdir(tests_dir):
+        return 0, 0, 0
+    import glob
+    files = sorted(glob.glob(os.path.join(tests_dir, "*_test.py")))
+    if not files:
+        return 0, 0, 0
+    total = failed = 0
+    env = dict(os.environ)
+    env["PYTHONPATH"] = path + os.pathsep + env.get("PYTHONPATH", "")
+    for tf in files:
+        proc = subprocess.run([sys.executable, tf], cwd=path, env=env,
+                               capture_output=True, text=True)
+        out = proc.stdout + proc.stderr
+        for line in out.splitlines():
+            m = re.match(r"Ran (\d+) test", line)
+            if m:
+                total += int(m.group(1))
+            if line.startswith("FAILED"):
+                fm = re.search(r"failures=(\d+)", line)
+                em = re.search(r"errors=(\d+)", line)
+                failed += (int(fm.group(1)) if fm else 0) + (int(em.group(1)) if em else 0)
+    return total, failed, (total - failed if total else 0)
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("project")
     ap.add_argument("--sarif", metavar="FILE", help="write SARIF 2.1.0 to FILE")
+    ap.add_argument("--run-tests", action="store_true",
+                    help="execute generated smoke tests and fold failures into the grade")
     a = ap.parse_args()
     path = a.project
     findings = scan(path) + run_bandit(path) + dep_scan(path)
+    failed_count = 0
+    if a.run_tests:
+        total, failed, passed = run_tests(path)
+        if total:
+            print(f"[tests] {total} run, {passed} passed, {failed} failed")
+            if failed:
+                failed_count = failed
+                findings.append(("MED", os.path.join(path, "tests"), 0,
+                                 f"{failed} smoke test(s) failed", "CWE-1120",
+                                 f"{failed}/{total} failing"))
+        else:
+            print("[tests] none found (run gen_tests.py first)")
     findings.sort(key=lambda x: {"HIGH": 0, "MED": 1, "LOW": 2}[x[0]])
     if a.sarif:
         doc = to_sarif(findings, path)
@@ -265,12 +309,12 @@ def main():
     for sev, fp, ln, desc, cwe, snip in findings:
         if sev == "HIGH":
             high += 1
-        cwes.add(cwe)
-        print(f"[{sev}] {fp}:{ln}  {desc}  [{cwe}]  | {snip}")
     g, penalty = grade(findings)
     print(f"---\n{high} HIGH, {len(findings)-high} other | CWEs: {', '.join(sorted(cwes))}")
     print(f"GRADE: {g}  (penalty {penalty})")
-    sys.exit(1 if high else 0)
+    # gate: HIGH always fails; with --run-tests, any test failure also fails
+    blocked = high or (a.run_tests and failed_count > 0)
+    sys.exit(1 if blocked else 0)
 
 
 if __name__ == "__main__":
