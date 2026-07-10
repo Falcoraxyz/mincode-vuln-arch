@@ -83,6 +83,14 @@ git clone https://github.com/Falcoraxyz/mincode-vuln-arch
 export OBSIDIAN_VAULT_PATH="$PWD/vault"   # optional, for vault output
 ```
 
+### Single-file (zero-install, any OS)
+```bash
+python build_pyz.py                 # -> mincode.pyz (one self-contained file)
+python mincode.pyz audit <project> --no-vault
+```
+Share `mincode.pyz` directly — no pip, no clone, runs on any Python 3.8+ host.
+(Windows: `python mincode.pyz ...`; Unix: also `./mincode.pyz ...` after chmod +x.)
+
 ---
 
 ## 🔧 Usage

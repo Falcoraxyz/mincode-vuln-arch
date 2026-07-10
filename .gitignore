@@ -17,5 +17,8 @@ Thumbs.db
 # auto-generated MOC (regenerate with vault_index.py)
 vault/Index.md
 
-# auto-generated cross-project learning note (regenerate with cross_learn.py)
-vault/Common-Mistakes.md
+# build artifact (regenerate with: python build_pyz.py)
+mincode.pyz
+
+# local vault default (created at runtime when no --vault / OBSIDIAN_VAULT_PATH)
+mincode-vault/

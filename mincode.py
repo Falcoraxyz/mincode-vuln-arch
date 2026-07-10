@@ -31,6 +31,11 @@ import sys
 import argparse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+# From a pyz bundle, __file__ is ".../mincode.pyz" (a file), so its dirname is
+# the real location; from mincode.py it's the repo root. Normalize both.
+if HERE.endswith(".pyz"):
+    HERE = os.path.dirname(HERE)
+# scripts live in ./scripts relative to HERE (works for both mincode.py and pyz)
 SCRIPTS = os.path.join(HERE, "scripts")
 
 
