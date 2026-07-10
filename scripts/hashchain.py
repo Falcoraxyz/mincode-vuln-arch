@@ -12,7 +12,7 @@ Usage:
 Manifest: <vault>/._chain/manifest.jsonl  (append-only)
 Each appended note gets frontmatter: chain_prev, chain_hash, chain_ts.
 """
-import os, sys, json, hashlib, hmac, datetime, argparse
+import os, sys, json, re, hashlib, hmac, datetime, argparse
 from pathlib import Path
 
 MANIFEST_REL = os.path.join("._chain", "manifest.jsonl")
@@ -181,9 +181,62 @@ def status(v):
     print(f"key: present ({os.path.getsize(os.path.join(v, KEY_PATH_REL))} bytes)")
 
 
+CWE_RE = re.compile(r"(CWE-\d+)")
+AUDIT_RE = re.compile(r"^Audit-(.+?)-(\d{4}-\d{2}-\d{2})\.md$")
+
+
+def _audit_notes(v, project):
+    """Return [(ts, date, set_of_cwes)] for Audit-<project>-* notes, newest last."""
+    out = []
+    for np_ in sorted(os.listdir(v)):
+        m = AUDIT_RE.match(np_)
+        if not m or m.group(1) != project:
+            continue
+        try:
+            ts = datetime.datetime.fromisoformat(
+                open(os.path.join(v, np_), encoding="utf-8").read().split("reviewed: ", 1)[1].split("\n", 1)[0])
+        except Exception:
+            ts = datetime.datetime.min
+        cwes = set(CWE_RE.findall(open(os.path.join(v, np_), encoding="utf-8").read()))
+        out.append((ts, m.group(2), cwes))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def diff_project(v, project):
+    """Regression diff: compare the latest Audit-<project>-* note against the
+    previous one. Prints NEW / FIXED / PERSISTENT CWEs. Returns 0 if no new
+    findings vs previous, 1 if new findings appeared (regression)."""
+    notes = _audit_notes(v, project)
+    if not notes:
+        print(f"no Audit-{project}-* notes found in vault.")
+        return 0
+    if len(notes) == 1:
+        print(f"only one audit for '{project}' ({notes[0][1]}) — {len(notes[0][2])} CWE(s): "
+              f"{', '.join(sorted(notes[0][2])) or 'none'}")
+        return 0
+    prev_ts, prev_date, prev_cwes = notes[-2]
+    cur_ts, cur_date, cur_cwes = notes[-1]
+    new = cur_cwes - prev_cwes
+    fixed = prev_cwes - cur_cwes
+    persistent = cur_cwes & prev_cwes
+    print(f"vault regression diff for '{project}':")
+    print(f"  prev: {prev_date} ({len(prev_cwes)} CWE)")
+    print(f"  curr: {cur_date} ({len(cur_cwes)} CWE)")
+    if new:
+        print(f"  NEW ({len(new)}): {', '.join(sorted(new))}")
+    if fixed:
+        print(f"  FIXED ({len(fixed)}): {', '.join(sorted(fixed))}")
+    if persistent:
+        print(f"  PERSISTENT ({len(persistent)}): {', '.join(sorted(persistent))}")
+    if not new and not fixed and not persistent:
+        print("  no CWE findings in either audit.")
+    return 1 if new else 0
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["append", "verify", "status", "rotate-key"])
+    ap.add_argument("cmd", choices=["append", "verify", "status", "rotate-key", "diff"])
     ap.add_argument("note", nargs="?")
     ap.add_argument("--vault")
     a = ap.parse_args()
@@ -198,6 +251,10 @@ def main():
         status(v)
     elif a.cmd == "rotate-key":
         rotate_key(v)
+    elif a.cmd == "diff":
+        if not a.note:
+            print("diff needs <project>"); sys.exit(2)
+        sys.exit(diff_project(v, a.note))
 
 
 if __name__ == "__main__":

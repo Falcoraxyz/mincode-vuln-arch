@@ -151,6 +151,9 @@ Use `scripts/llm_review.py <project> [--model <name>] [--backend <url>]`.
 - Writes `[[Audit-<project>-llm-<date>]]` to the vault (with `backend:` recorded).
   Use after `audit.py` to cover the blind spots regex misses. Offline-friendly via
   Ollama/llama.cpp.
+- Extending the toolkit? Gotchas (unittest-on-Windows, `.mincode/` gitignore trap,
+  cross-drive `relpath`, local-LLM probe, patch-pagination regressions, SARIF
+  shape): `references/engineering-notes.md`.
 
 ### 2b. Living architecture table — #10
 `sample_repo.py` now auto-detects stacks in a mined repo (CLI, Web API, FastAPI,
