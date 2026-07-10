@@ -85,12 +85,14 @@ Use `scripts/audit.py <project_path>`.
 - **CWE tagging + grade (#2):** every finding carries a CWE id (CWE-78,
   CWE-502, …); the project gets an A–F grade from a severity-weighted penalty
   (HIGH=10, MED=3, LOW=1). Grade prints with the CWE set for triage.
-- **Test generation (#5):** `scripts/gen_tests.py <project>` parses `src/` with
-  `ast` (stdlib) and writes one smoke test per public function/class into
+- **Test generation (#5, upgraded #8):** `scripts/gen_tests.py <project>` parses
+  `src/` with `ast` (stdlib) and writes one test per public function/class into
   `tests/<module>_test.py` (skips existing). Default framework `unittest`
-  (stdlib, zero-dep) — run each with `python tests/<module>_test.py` or
-  `python -m unittest discover -s tests` from the project root. Fills the
-  "minimal ≠ untested" gap: every module gets at least a smoke test.
+  (stdlib, zero-dep). **Now assertion-aware:** it reads each function's return
+  annotation and emits typed dummy args + an `isinstance(result, <ret_type>)`
+  assertion (or `is not None` fallback), so a wrong return type / broken
+  computation is *actually caught* by `audit.py --run-tests` (#2) — not a
+  pass-through smoke stub. Fills the "minimal ≠ untested" gap.
 - Severity: HIGH / MED / LOW. Project blocked from "done" if any HIGH unresolved.
 - Writes `[[Audit-<project>-<date>]]` to vault.
 
@@ -209,10 +211,23 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
   junction/symlink the skill dir from Hermes to the D: repo if you want one
   source of truth (use `subprocess.run('mklink /J ...', shell=True)` in Python
   — raw `cmd /c mklink` strips quotes and fails under git-bash).
-- **Running generated tests:** prefer `python tests/<mod>_test.py` (reliable,
-  uses `unittest.main`). `python -m unittest discover -s tests` can report 0
-  tests in some envs due to loader path quirks — fall back to the direct file
-  run or `python -m unittest tests.<mod>_test`. See `references/test-generation.md`.
+- **Running generated tests:** `python -m unittest discover -s tests` reports 0
+  tests on Windows (loader path quirk). Reliable pattern: run each
+  `tests/<mod>_test.py` directly with `unittest.main()` and inject the project
+  root so `from src import x` resolves — `env["PYTHONPATH"] = root`. That is
+  exactly what `audit.py --run-tests` does (`run_tests()` glob `tests/*_test.py`,
+  subprocess per file, PYTHONPATH-injected). Fallback: `python -m unittest
+  tests.<mod>_test`. See `references/test-generation.md`.
+- **`audit.py` scanning its own bundled scripts:** `gen_ci.py` copies the skill
+  scripts into the target repo as `.mincode/`. `audit.py`'s `eval`/`exec` regex
+  matches the *literal pattern strings* inside `audit.py` itself, producing
+  false HIGH findings (CWE-95). Mitigation: `.mincode` is in `SKILL_DIRS`/`SKIP_DIRS`
+  — never remove it, or every audited repo that used `gen_ci.py` flags itself.
+- **CI gate deploy trap:** `gen_ci.py` writes `.mincode/` (scripts) + `.github/`
+  into the target repo. These MUST be committed — do NOT gitignore `.mincode/`.
+  CI runs `python .mincode/audit.py ...`; if the dir is ignored, the checkout
+  lacks the scripts and the workflow fails with "No such file". The generator
+  prints a REMEMBER line for this; honor it.
 - **Living arch table (#10) label contract (RESOLVED):** `sample_repo.py`'s
   `detect_stack_hints()` marker KEYS now equal the Architecture Decision table
   row names below EXACTLY (canonical: `CLI`, `Web API`, `Data / ETL`,

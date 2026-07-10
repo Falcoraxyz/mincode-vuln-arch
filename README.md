@@ -27,7 +27,7 @@ library (optional `bandit` / `pip-audit` / an LLM key deepen coverage).
 | 2c | **Test execution gate** | `audit.py` | `--run-tests` executes the smoke suite; failures lower grade + fail the gate (CWE-1120). |
 | 3 | **Mine architecture** | `sample_repo.py` | Extract clean module boundaries + reusable code snippets from any repo (human or AI-authored). |
 | 3b | **Multi-language audit** | `audit.py` | Heuristic scan across Python + JS/TS/Go/Rust/sh (polyglot rules), CWE-tagged. |
-| 4 | **Gen tests** | `gen_tests.py` | `ast`-based smoke-test generation — every module gets a test (zero-dep `unittest`). |
+| 4 | **Gen tests** | `gen_tests.py` | `ast`-based test generation — typed dummy args + `isinstance` assertions from return annotations (#8). Zero-dep `unittest`. |
 | 5 | **Hash-chain vault** | `hashchain.py` | Local, append-only, **HMAC-signed** notes — tamper-evident + forged-resistant. No network. |
 | 6 | **Vault MOC** | `vault_index.py` | Auto-generated Obsidian Map of Content with `[[wikilinks]]` + CWE cross-links. |
 | 7 | **Cross-project learn** | `cross_learn.py` | Aggregates recurring CWEs → `Common-Mistakes.md` + CI guardrail suggestions. |

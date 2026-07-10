@@ -309,6 +309,8 @@ def main():
     for sev, fp, ln, desc, cwe, snip in findings:
         if sev == "HIGH":
             high += 1
+        cwes.add(cwe)
+        print(f"[{sev}] {fp}:{ln}  {desc}  [{cwe}]  | {snip}")
     g, penalty = grade(findings)
     print(f"---\n{high} HIGH, {len(findings)-high} other | CWEs: {', '.join(sorted(cwes))}")
     print(f"GRADE: {g}  (penalty {penalty})")
