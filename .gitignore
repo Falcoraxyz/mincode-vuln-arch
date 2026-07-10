@@ -16,3 +16,6 @@ Thumbs.db
 
 # auto-generated MOC (regenerate with vault_index.py)
 vault/Index.md
+
+# auto-generated cross-project learning note (regenerate with cross_learn.py)
+vault/Common-Mistakes.md

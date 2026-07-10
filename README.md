@@ -25,6 +25,7 @@ mincode-vuln-arch/
     gen_tests.py       # generate smoke tests from src/ (ast, zero-dep)
     hashchain.py       # local HMAC-signed hash-chain for vault notes
     vault_index.py     # Obsidian MOC / wikilink index generator
+    cross_learn.py     # aggregate recurring CWE into Common-Mistakes.md
   vault/              # Obsidian vault (hash-chained notes)
     ._chain/manifest.jsonl
     Index.md          # auto-generated Map of Content
@@ -46,6 +47,7 @@ python scripts/sample_repo.py <repo_path_or_url>
 python scripts/hashchain.py append "vault/Audit-myapp.md"
 python scripts/hashchain.py verify
 python scripts/vault_index.py --vault vault   # regenerate MOC
+python scripts/cross_learn.py --vault vault   # aggregate recurring CWE
 ```
 
 ## Architecture decision table (optimal + stable + newest usable)

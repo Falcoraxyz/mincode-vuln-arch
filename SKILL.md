@@ -100,7 +100,14 @@ Use `scripts/vault_index.py [--vault <dir>]`.
 - Idempotent — rerun after every append to keep the vault navigable in Obsidian.
 - Regenerate MOC as part of the post-audit / post-mine workflow.
 
-### 5. Persist to permanent memory
+### 5b. Cross-project learnings — #8
+Use `scripts/cross_learn.py [--vault <dir>]`.
+- Scans all `Audit-*` / `Template-*` notes, extracts CWE tags, builds a
+  frequency map of recurring weaknesses across projects.
+- Writes `Common-Mistakes.md`: ranked CWE table + per-CWE mitigation hints +
+  "Suggested guardrails" (CWEs seen in ≥2 projects = systemic → add to CI gate).
+- The MOC auto-links it under "Cross-Project Learnings", so the KB self-improves
+  as more audits land. Rerun after every audit.
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,
   user prefs). NOT task progress. Use the `memory` tool.
 - Vault is the long-term KB; memory is the cross-session shortcut.
@@ -122,9 +129,29 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 
 ## Pitfalls
 - Don't mine a repo that isn't clean — garbage in, garbage template.
-- Hash-chain is local tamper-evidence, NOT a distributed ledger. No network.
+- Hash-chain is local tamper-evidence + HMAC-signed (forged-resistant), NOT a
+  distributed ledger. No network. Key is per-vault at `vault/._chain/.key`
+  (gitignored — never commit it).
 - Audit is heuristic — a clean scan is not a guarantee. State residual risk.
-- Minimal ≠ untested. Every module gets at least one test.
+  `pip-audit` (for dep CVEs) and `bandit` are optional network/install extras.
+- Minimal ≠ untested. `gen_tests.py` gives every module a smoke test.
+- **Re-appending an already-chained note:** `hashchain append` strips any
+  existing frontmatter, re-signs the clean body, and rewrites fresh
+  frontmatter. Never hand-edit a note's `chain_*` frontmatter — it triggers a
+  false TAMPER on `verify`. If a note body changed outside `append`, rebuild the
+  chain from a clean state: `rm -rf vault/._chain` then re-`append` notes in
+  order. (Editing the manifest AND the note together is caught by HMAC — that
+  is the intended forge detection, not a bug.)
+- **Cross-drive vault (Windows C:↔D:):** `hashchain` uses `os.path.relpath`
+  but falls back to the absolute path when the note and vault are on different
+  mounts (ValueError). Always set `OBSIDIAN_VAULT_PATH` to the real vault dir;
+  junction/symlink the skill dir from Hermes to the D: repo if you want one
+  source of truth (use `subprocess.run('mklink /J ...', shell=True)` in Python
+  — raw `cmd /c mklink` strips quotes and fails under git-bash).
+- **Running generated tests:** prefer `python tests/<mod>_test.py` (reliable,
+  uses `unittest.main`). `python -m unittest discover -s tests` can report 0
+  tests in some envs due to loader path quirks — fall back to the direct file
+  run or `python -m unittest tests.<mod>_test`.
 - On Windows the skill dir (C:) and vault (D:) are on different drives —
   scripts use `_rel_or_abs` for cross-drive paths. See
   `references/windows-operations.md` for junction creation + consent-gate gotchas.
