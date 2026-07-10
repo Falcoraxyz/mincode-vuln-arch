@@ -5,6 +5,9 @@ on:
     branches: [master, main]
   pull_request:
 
+permissions:
+  security-events: write   # allow SARIF upload to code scanning
+
 jobs:
   audit:
     runs-on: ubuntu-latest
@@ -22,6 +25,6 @@ jobs:
         run: python mincode.py vault status
       - name: Upload SARIF
         if: always()
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: audit.sarif
