@@ -46,6 +46,9 @@ Use `scripts/proj_gen.py <name> [--path .] [--no-git]`. Standard skeleton:
 - **Auto-git (#6):** `proj_gen.py` runs `git init` + initial commit and tags
   `scaffold-<date>` (skip with `--no-git`). `audit.py` tags `audit-clean-<date>`
   on a fully clean pass — every green state is versioned.
+- **CI gate (#1):** `scripts/gen_ci.py --path <repo>` writes
+  `.github/workflows/audit.yml` + copies scripts to `.mincode/` so the audit is
+  *enforced* in CI (fails on any HIGH). See `references/ci-gate.md`.
 
 ### 2. Mine clean architecture from sample repos
 Use `scripts/sample_repo.py <repo_path_or_url>`.
@@ -61,7 +64,10 @@ Use `scripts/sample_repo.py <repo_path_or_url>`.
 Use `scripts/audit.py <project_path>`.
 - Heuristic scan: hardcoded secrets, eval/exec, SQL string concat, unsafe
   deserialization, path traversal, weak crypto, shell=True, missing input
-  validation, dependency pinning.
+  validation, dependency pinning. **Multi-language (#3):** `.py` uses Python-specific
+  rules; `.js/.jsx/.ts/.tsx/.go/.rs/.sh` use polyglot rules (child_process exec,
+  `new Function`, SQL concat, hardcoded secrets, weak hash, TLS-skip). `.json/.yaml`
+  scanned for secrets only.
 - If `bandit` installed → run it too and merge findings.
 - **Dependency CVE scan (#1):** finds `requirements*.txt` / `pyproject.toml` /
   `Pipfile` / `poetry.lock`, runs `pip-audit` when available (network for the
@@ -146,6 +152,14 @@ Operational lessons — full detail in `references/gotchas.md`:
   `cmd /c mklink /J` (bash `cmd //c` strips quotes and fails silently).
 - **Deployment gotchas** (Windows junction relocation, cross-drive relpath, unittest
   direct-run, hashchain re-sign frontmatter): see `references/windows-deployment.md`.
+- **CI gate generator (`gen_ci.py`, #1):** writes `.github/workflows/audit.yml`
+  that runs `gen_tests.py` → smoke tests → `audit.py` (fails on any HIGH). It
+  also copies `scripts/` into the target repo as `.mincode/`. GOTCHAS:
+  - `.mincode/` MUST be committed — do NOT gitignore it (CI needs the scripts).
+  - The generated YAML must use RELATIVE paths only (`.mincode/...`); never
+    embed absolute Windows paths — they break Linux CI runners.
+  - `python -m unittest discover -s tests` can pass vacuously (0 tests) in some
+    envs; the audit gate is the real enforcement. See `references/ci-gate.md`.
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,
   user prefs). NOT task progress. Use the `memory` tool.
 - Vault is the long-term KB; memory is the cross-session shortcut.

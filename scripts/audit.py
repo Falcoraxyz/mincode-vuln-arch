@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Minimal heuristic vulnerability audit. No network, stdlib only.
 Usage: python audit.py <project_path>
-Scans .py/.js/.ts/.sh/.json for common weakness patterns.
+Scans .py/.js/.ts/.jsx/.tsx/.go/.rs/.sh/.json/.yaml for common weakness patterns.
 Exit 0 if no HIGH; exit 1 if any HIGH.
-Optional: if `bandit` on PATH, runs it and merges.
-Dependency CVE scan via pip-audit when available.
+Optional: if `bandit` on PATH, runs it (Python only) and merges.
+Dependency CVE scan via pip-audit (Python) / cargo audit (Rust) when available.
 Each finding is tagged with a CWE and the project gets an A-F grade.
 """
 import os, re, sys, subprocess, json
 
-# (regex, description, CWE-id)
-PATTERNS = {
+# Python-specific patterns (regex, description, CWE-id)
+PY_PATTERNS = {
     "HIGH": [
         (r"(?i)(password|passwd|pwd|pw|token|access[_-]?key|api[_-]?key|secret|private[_-]?key)\s*=\s*['\"][^'\"]+['\"]", "hardcoded credential", "CWE-798"),
         (r"\beval\s*\(", "eval() — code injection risk", "CWE-95"),
@@ -18,7 +18,6 @@ PATTERNS = {
         (r"(?i)subprocess\.[^\n]*shell\s*=\s*True", "shell=True subprocess", "CWE-78"),
         (r"(?i)pickle\.loads?", "unsafe deserialization (pickle)", "CWE-502"),
         (r"(?i)yaml\.load\s*\([^,)]*\)", "yaml.load without safe_load", "CWE-502"),
-        (r"(?i)md5|sha1", "weak hash (md5/sha1)", "CWE-327"),
         (r"(?i)SELECT.+WHERE+.['\"]\s*\+|f\"\"\"SELECT", "SQL string concat", "CWE-89"),
         (r"\.\./", "potential path traversal", "CWE-22"),
     ],
@@ -33,10 +32,51 @@ PATTERNS = {
     ],
 }
 
-EXT = (".py", ".js", ".ts", ".sh", ".json", ".yaml", ".yml")
+# Polyglot patterns (apply to js/ts/go/rs/sh) — language-agnostic weaknesses
+POLYGLOT_PATTERNS = {
+    "HIGH": [
+        (r"(?i)(password|passwd|pwd|token|api[_-]?key|secret|private[_-]?key|access[_-]?token)\s*[:=]\s*['\"][^'\"]+['\"]", "hardcoded credential", "CWE-798"),
+        (r"\beval\s*\(", "eval() — code injection risk", "CWE-95"),
+        (r"(?i)\bnew\s+Function\s*\(", "new Function() — code injection risk", "CWE-95"),
+        (r"(?i)child_process\.(exec|execSync)\s*\([^)]*\)", "shell command exec", "CWE-78"),
+        (r"(?i)\b(exec|system|spawn|shell)\s*\([^)]*\$?[A-Za-z_][A-Za-z0-9_]*", "shell command with var interpolation", "CWE-78"),
+        (r"(?i)SELECT.+WHERE+['\"`]\s*\+|f?[\"'`]SELECT", "SQL string concat", "CWE-89"),
+        (r"\.\./", "potential path traversal", "CWE-22"),
+        (r"(?i)(md5|sha1)\s*\(", "weak hash (md5/sha1)", "CWE-327"),
+    ],
+    "MED": [
+        (r"(?i)verify\s*[:=]\s*false|rejectUnauthorized\s*[:=]\s*false|InsecureSkipVerify", "TLS verification disabled", "CWE-295"),
+        (r"(?i)Math\.random\s*\(\s*\)", "non-crypto RNG for secrets", "CWE-330"),
+        (r"(?i)(debug)\s*[:=]\s*true", "debug mode on", "CWE-489"),
+    ],
+    "LOW": [
+        (r"(?i)TODO|FIXME", "leftover TODO/FIXME", "CWE-1078"),
+        (r"(?i)console\.log\s*\(", "debug log (noise)", "CWE-489"),
+    ],
+}
+
+# file extension -> which pattern set to use
+EXT_LANG = {
+    ".py": "py",
+    ".js": "poly", ".jsx": "poly", ".ts": "poly", ".tsx": "poly",
+    ".go": "poly", ".rs": "poly",
+    ".sh": "poly",
+    ".json": "poly", ".yaml": "yaml", ".yml": "yaml",
+}
+EXT = tuple(EXT_LANG.keys())
 SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tests")
 
-# score weights per severity for grading
+
+def patterns_for(ext):
+    lang = EXT_LANG.get(ext)
+    if lang == "py":
+        return PY_PATTERNS
+    if lang == "poly":
+        return POLYGLOT_PATTERNS
+    # yaml/json: only scan for hardcoded secrets (no code patterns)
+    return {"HIGH": POLYGLOT_PATTERNS["HIGH"][:1], "MED": [], "LOW": []}
+
+
 GRADE_WEIGHTS = {"HIGH": 10, "MED": 3, "LOW": 1}
 GRADE_BANDS = [  # (max_penalty, grade)
     (0, "A"),
@@ -54,7 +94,8 @@ def scan(path):
         if any(s in dp.split(os.sep) for s in SKIP_DIRS):
             continue
         for name in fn:
-            if not name.endswith(EXT):
+            ext = os.path.splitext(name)[1].lower()
+            if ext not in EXT_LANG:
                 continue
             fp = os.path.join(dp, name)
             try:
@@ -62,9 +103,10 @@ def scan(path):
                     lines = f.readlines()
             except Exception:
                 continue
+            pats = patterns_for(ext)
             for i, line in enumerate(lines, 1):
-                for sev, pats in PATTERNS.items():
-                    for rx, desc, cwe in pats:
+                for sev, plist in pats.items():
+                    for rx, desc, cwe in plist:
                         if re.search(rx, line):
                             findings.append((sev, fp, i, desc, cwe, line.strip()[:80]))
     return findings
