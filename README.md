@@ -21,7 +21,7 @@ mincode-vuln-arch/
   scripts/
     proj_gen.py       # minimal project scaffold (auto-git, tags scaffold-<date>)
     audit.py          # heuristic vuln audit (CWE + A-F grade)
-    sample_repo.py     # mine clean architecture from a repo
+    sample_repo.py     # mine clean architecture + reusable snippets from a repo
     gen_tests.py       # generate smoke tests from src/ (ast, zero-dep)
     hashchain.py       # local HMAC-signed hash-chain for vault notes
     vault_index.py     # Obsidian MOC / wikilink index generator

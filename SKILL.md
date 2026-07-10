@@ -52,6 +52,9 @@ Use `scripts/sample_repo.py <repo_path_or_url>`.
 - Extracts: dir layout, module boundaries, naming, public API surface, test ratio.
 - Flags "clean" only if: flat-ish modular layout, no god-files (>400 lines warning), tests present, no dead deps.
 - Writes a `[[Template-<name>]]` note to vault + a reusable snippet in `docs/`.
+- **Snippet extraction (#4):** also pulls public function/class signatures from
+  clean `.py` modules into a `## Reusable snippets` section (vault note) and a
+  local `docs/snippets.md` — reusable code patterns, not just structure stats.
 - Human OR AI-authored both accepted — judged by structure, not author.
 
 ### 3. Vulnerability audit (gate)
@@ -111,6 +114,8 @@ Use `scripts/cross_learn.py [--vault <dir>]`.
   "Suggested guardrails" (CWEs seen in ≥2 projects = systemic → add to CI gate).
 - The MOC auto-links it under "Cross-Project Learnings", so the KB self-improves
   as more audits land. Rerun after every audit.
+- **Deployment gotchas** (Windows junction relocation, cross-drive relpath, unittest
+  direct-run, hashchain re-sign frontmatter): see `references/windows-deployment.md`.
 - Save durable facts/decisions to Hermes memory (architecture choices, gotchas,
   user prefs). NOT task progress. Use the `memory` tool.
 - Vault is the long-term KB; memory is the cross-session shortcut.

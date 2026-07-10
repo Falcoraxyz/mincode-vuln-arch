@@ -9,10 +9,11 @@ Judges by STRUCTURE only (human or AI-authored both fine):
  - no obvious dead deps
 Writes [[Template-<name>]] note to vault + prints a reusable snippet.
 """
-import os, sys, subprocess, argparse, json, datetime
+import os, sys, subprocess, argparse, json, datetime, ast
 
 SKIP = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "dist", "build")
 GOD_LINES = 400
+MAX_SNIPPETS_PER_MOD = 4
 
 
 def resolve_vault(explicit):
@@ -68,6 +69,39 @@ def analyze(path):
             "god_files": god}
 
 
+def extract_snippets(path):
+    """Pull short public function/class signatures from clean .py modules.
+    Returns list of (file, signature)."""
+    out = []
+    for dp, dn, fn in os.walk(path):
+        if any(s in dp.split(os.sep) for s in SKIP):
+            continue
+        for name in fn:
+            if (not name.endswith(".py") or name in ("__init__.py", "__main__.py")
+                    or "test" in name.lower()):
+                continue
+            fp = os.path.join(dp, name)
+            rel = os.path.relpath(fp, path)
+            try:
+                src = open(fp, encoding="utf-8").read()
+                tree = ast.parse(src)
+            except Exception:
+                continue
+            got = 0
+            for node in tree.body:
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and not node.name.startswith("_"):
+                    sig = f"def {node.name}(" + ", ".join(a.arg for a in node.args.args) + ")"
+                    out.append((rel, sig))
+                    got += 1
+                elif isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
+                    bases = ", ".join(getattr(b, "id", getattr(b, "attr", "")) for b in node.bases)
+                    out.append((rel, f"class {node.name}({bases})"))
+                    got += 1
+                if got >= MAX_SNIPPETS_PER_MOD:
+                    break
+    return out
+
+
 def cleanliness(a):
     score = 0
     notes = []
@@ -95,6 +129,7 @@ def main():
     info = analyze(path)
     verdict, notes = cleanliness(info)
     name = os.path.basename(path.rstrip("/"))
+    snippets = extract_snippets(path)
     snippet = (
         f"# Template-{name}\n"
         f"source: {a.repo}\nverdict: {verdict}\n"
@@ -104,6 +139,8 @@ def main():
         f"\n## Stats\n- files: {info['n_files']}\n- tests: {info['tests']}\n"
         f"- god-files: {info['god_files'] or 'none'}\n"
         f"\n## Notes\n- " + ("; ".join(notes) if notes else "clean structure") + "\n"
+        f"\n## Reusable snippets ({len(snippets)})\n" +
+        ("".join(f"- `{f}`: `{s}`\n" for f, s in snippets) if snippets else "- _no public symbols extracted_\n")
     )
     print(snippet)
     # write to vault via resolve_vault (consistent with hashchain.py)
@@ -113,6 +150,14 @@ def main():
     with open(np_, "w") as f:
         f.write(snippet)
     print(f"\n[vault] wrote {np_}")
+    # also drop a reusable snippets file next to the repo (local only)
+    if not cloned and snippets:
+        sdir = os.path.join(path, "docs")
+        os.makedirs(sdir, exist_ok=True)
+        with open(os.path.join(sdir, "snippets.md"), "w") as f:
+            f.write(f"# Reusable snippets mined from {name}\n\n" +
+                    "".join(f"### `{f}`\n```python\n{s}\n```\n\n" for f, s in snippets))
+        print(f"[local] wrote {path}/docs/snippets.md")
     if cloned:
         subprocess.run(["rm", "-rf", path])
 
