@@ -13,8 +13,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Audit toolkit scripts
-        run: python mincode.py audit . --no-vault --sarif audit.sarif
+      - name: Smoke test the toolkit against a generated clean project
+        run: |
+          python mincode.py gen demo --path /tmp/demo
+          python mincode.py audit /tmp/demo --no-vault --sarif audit.sarif
+          python mincode.py tests /tmp/demo
+      - name: Verify hash-chain round-trip
+        run: python mincode.py vault status
       - name: Upload SARIF
         if: always()
         uses: github/codeql-action/upload-sarif@v3
