@@ -44,6 +44,9 @@ python mincode.py init <repo>             # scaffold mincode.toml + CI into a re
 - Vault defaults to `./mincode-vault` when `OBSIDIAN_VAULT_PATH` / `--vault` / `mincode.toml` are unset.
 - Optional `mincode.toml` (project root, walk-up, or `$HERMES_HOME/mincode.toml`) sets
   `[vault]`, `[audit] skip_dirs + threshold`, `[llm] model + base_url`. See `mincode.toml.example`.
+- **MCP server:** `python scripts/mcp_server.py` (or `mincode mcp`) exposes the toolkit as
+  native MCP tools (`mincode_audit`, `mincode_gen_tests`, `mincode_mine`, `mincode_llm_review`)
+  over stdio — directly usable from Claude Desktop / Cursor / Zed / Cline with zero deps.
 - No hardcoded paths — runs from any OS / cwd.
 
 ## Workflow (run in order)

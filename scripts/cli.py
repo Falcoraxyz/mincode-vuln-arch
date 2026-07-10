@@ -40,6 +40,7 @@ COMMANDS = {
     "moc": ("vault_index.py", "rebuild Obsidian Map of Content"),
     "learn": ("cross_learn.py", "cross-project CWE learnings"),
     "ci": ("gen_ci.py", "generate GitHub Actions audit-gate workflow"),
+    "mcp": ("mcp_server.py", "start an MCP server (stdio) for agent integration"),
 }
 
 

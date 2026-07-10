@@ -100,6 +100,21 @@ python mincode.pyz audit <project> --no-vault
 Share `mincode.pyz` directly — no pip, no clone, runs on any Python 3.8+ host.
 (Windows: `python mincode.pyz ...`; Unix: also `./mincode.pyz ...` after chmod +x.)
 
+### As an MCP server (native tool for Claude Desktop / Cursor / Zed / Cline)
+```bash
+# stdio MCP server exposing mincode_audit / _gen_tests / _mine / _llm_review
+python scripts/mcp_server.py
+# or via the CLI wrapper:
+mincode mcp
+```
+Client config (`claude_desktop_config.json` / `mcp.json`):
+```json
+{ "mcpServers": { "mincode": {
+    "command": "python",
+    "args": ["/path/to/mincode-vuln-arch/scripts/mcp_server.py"] } } }
+```
+The server speaks MCP JSON-RPC (2024-11-05) over stdio with **zero dependencies**.
+
 ---
 
 ## 🔧 Usage
@@ -117,6 +132,7 @@ python mincode.py vault verify              # 6. verify hash-chain
 python mincode.py moc                       #    rebuild Obsidian MOC
 python mincode.py learn                     #    aggregate recurring CWE
 python mincode.py init myapp                # one-shot: mincode.toml + CI into a repo
+python mincode.py mcp                        # start MCP server (stdio) for agent integration
 ```
 
 `--no-vault` skips the vault note (results still print / SARIF / HTML). Vault defaults
