@@ -8,6 +8,8 @@ Dependency CVE scan via pip-audit (Python) / cargo audit (Rust) when available.
 Each finding is tagged with a CWE and the project gets an A-F grade.
 """
 import os, re, sys, subprocess, json
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 
 # Python-specific patterns (regex, description, CWE-id)
 PY_PATTERNS = {
@@ -88,10 +90,11 @@ GRADE_BANDS = [  # (max_penalty, grade)
 GRADE_F = "F"
 
 
-def scan(path):
+def scan(path, skip_dirs=None):
     findings = []
+    skip = skip_dirs if skip_dirs is not None else SKIP_DIRS
     for dp, dn, fn in os.walk(path):
-        if any(s in dp.split(os.sep) for s in SKIP_DIRS):
+        if any(s in dp.split(os.sep) for s in skip):
             continue
         for name in fn:
             ext = os.path.splitext(name)[1].lower()
@@ -330,9 +333,15 @@ def main():
     ap.add_argument("--report", metavar="FILE", help="write an HTML report to FILE")
     ap.add_argument("--run-tests", action="store_true",
                     help="execute generated smoke tests and fold failures into the grade")
+    ap.add_argument("--threshold", type=int, default=None,
+                    help="max HIGH findings allowed before the gate fails (0 = zero-tolerance)")
+    ap.add_argument("--config", default=None, help="path to mincode.toml")
     a = ap.parse_args()
+    cfg = config.load_config(a.config)
+    threshold = a.threshold if a.threshold is not None else cfg["audit"]["threshold"]
+    skip = list(SKIP_DIRS) + list(cfg["audit"].get("skip_dirs") or [])
     path = a.project
-    findings = scan(path) + run_bandit(path) + dep_scan(path)
+    findings = scan(path, skip) + run_bandit(path) + dep_scan(path)
     failed_count = 0
     if a.run_tests:
         total, failed, passed = run_tests(path)
@@ -376,8 +385,10 @@ def main():
         with open(a.report, "w", encoding="utf-8") as f:
             f.write(html)
         print(f"[report] wrote {a.report}")
-    # gate: HIGH always fails; with --run-tests, any test failure also fails
-    blocked = high or (a.run_tests and failed_count > 0)
+    # gate: fails if HIGH exceeds threshold, or (with --run-tests) any test fails
+    blocked = high > threshold or (a.run_tests and failed_count > 0)
+    if high > threshold:
+        print(f"GATE FAIL: {high} HIGH > threshold {threshold}")
     sys.exit(1 if blocked else 0)
 
 

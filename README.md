@@ -35,7 +35,7 @@ library (optional `bandit` / `pip-audit` / an LLM key deepen coverage).
 | 8 | **LLM review** | `llm_review.py` | Logic-flaw review via OpenAI-compatible API; auto-detects Ollama/llama.cpp (offline) or OpenAI. No key → safe skip. |
 | 9 | **Living arch table** | `sample_repo.py` | Detects stacks in mined repos; flags missing rows in the SKILL.md decision table. |
 | 10 | **Auto-git** | `proj_gen.py` / `audit.py` | Tags `scaffold-<date>` / `audit-clean-<date>` — every green state is versioned. |
-| 11 | **CI gate** | `gen_ci.py` | Generates a GitHub Actions workflow that fails on any HIGH finding — audit is *enforced*, not just tagged. |
+| 12 | **Config file** | `config.py` | Optional `mincode.toml` for vault path, audit skip-dirs/threshold, LLM model/base_url. |
 
 ---
 

@@ -13,6 +13,8 @@ Manifest: <vault>/._chain/manifest.jsonl  (append-only)
 Each appended note gets frontmatter: chain_prev, chain_hash, chain_ts.
 """
 import os, sys, json, re, hashlib, hmac, datetime, argparse
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 from pathlib import Path
 
 MANIFEST_REL = os.path.join("._chain", "manifest.jsonl")
@@ -22,6 +24,9 @@ KEY_PATH_REL = os.path.join("._chain", ".key")
 def vault_path(explicit):
     if explicit:
         return explicit
+    cfg_path = config.load_config().get("vault", {}).get("path")
+    if cfg_path:
+        return cfg_path
     env = os.path.join(os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes")), ".env")
     v = None
     try:

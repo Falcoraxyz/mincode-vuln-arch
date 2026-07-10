@@ -55,10 +55,17 @@ Use `scripts/sample_repo.py <repo_path_or_url>`.
 - Extracts: dir layout, module boundaries, naming, public API surface, test ratio.
 - Flags "clean" only if: flat-ish modular layout, no god-files (>400 lines warning), tests present, no dead deps.
 - Writes a `[[Template-<name>]]` note to vault + a reusable snippet in `docs/`.
+- **Config file (#10):** `scripts/config.py` reads an optional `mincode.toml`
+  (project root, or walk-up, or `<HERMES_HOME>/mincode.toml`) for shared settings:
+  `[vault] path`, `[audit] skip_dirs` + `threshold`, `[llm] model` + `base_url`.
+  Precedence: CLI flag > env var > `mincode.toml` > built-in default. Stdlib-only
+  (`tomllib` on 3.11+, minimal fallback parser otherwise). Wired into
+  `audit.py`, `llm_review.py`, `sample_repo.py`, `hashchain.py`.
 - **Arch table auto-apply (#9):** `sample_repo.py --apply-arch` appends any
   missing Architecture Decision rows (from `ARCH_PICKS` defaults) straight into
   `SKILL.md` — closes the loop from the #10 living-arch-table suggestions
   instead of only flagging them. Without the flag it still only *suggests*.
+- **Snippet extraction (#4):** also pulls public function/class signatures from
   clean `.py` modules into a `## Reusable snippets` section (vault note) and a
   local `docs/snippets.md` — reusable code patterns, not just structure stats.
 - Human OR AI-authored both accepted — judged by structure, not author.
@@ -290,6 +297,7 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
 - `references/audit-output-formats.md` — how to add `--sarif`/`--report`/future formats (pure `to_<fmt>` fn, call after grade), the `main()` regression trap (don't drop the `cwes.add`+`print` loop), and the `--run-tests` fixture recipe. Read before editing `audit.py main()`.
 - `references/test-skill-scripts.md` — how to import/unit-test THIS skill's own `scripts/*.py` from the terminal on Windows+git-bash (MSYS path trap, `$SKILL` single-quote trap, `/tmp` nonexistence). Read before debugging a script in-place.
+- `references/self-test-gotchas.md` — condensed self-test traps: heredoc `$VAR` non-expansion, `/d/` vs `D:/` in `open()`, copy-to-cwd import loop, `.mincode` SKIP_DIRS, PYTHONPATH for `from src import X`.
 
 ## gen_ci.py pitfalls (CI gate #1b)
 - The workflow YAML must be **portable**: copy scripts into the target repo as

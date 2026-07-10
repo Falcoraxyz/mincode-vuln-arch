@@ -12,6 +12,8 @@ Stdlib only (urllib). Model defaults to the value of OPENAI_MODEL or
 'gpt-4o-mini'.
 """
 import os, sys, json, argparse, datetime, urllib.request, urllib.error
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 
 SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tests", "docs")
 EXT = (".py", ".js", ".ts", ".go", ".rs", ".java")
@@ -125,13 +127,17 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("project")
     ap.add_argument("--vault")
-    ap.add_argument("--model", default=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"))
-    ap.add_argument("--backend", default=os.environ.get("OPENAI_BASE_URL"),
+    ap.add_argument("--model", default=None, help="model name (else OPENAI_MODEL / config / gpt-4o-mini)")
+    ap.add_argument("--backend", default=None,
                     help="explicit OpenAI-compatible base URL (overrides auto-detect)")
+    ap.add_argument("--config", default=None, help="path to mincode.toml")
     a = ap.parse_args()
+    cfg = config.load_config(a.config)
+    model = a.model or os.environ.get("OPENAI_MODEL") or cfg["llm"].get("model") or "gpt-4o-mini"
     api_key = os.environ.get("OPENAI_API_KEY")
-    base_url = a.backend or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    key, url, label, usable = detect_backend(a.model, api_key, base_url)
+    base_url = (a.backend or os.environ.get("OPENAI_BASE_URL")
+                or cfg["llm"].get("base_url") or "https://api.openai.com/v1")
+    key, url, label, usable = detect_backend(model, api_key, base_url)
     if not usable:
         print("llm_review: no backend available — set OPENAI_API_KEY, or run a local "
               "Ollama (http://localhost:11434) / llama.cpp server. Skipping (heuristic "
@@ -141,13 +147,13 @@ def main():
     if not code:
         print("llm_review: no source files collected.")
         sys.exit(0)
-    print(f"llm_review: sending ~{len(code)} chars to {a.model} via {label} ({url}) ...")
-    result = review(code, a.model, key, url)
+    print(f"llm_review: sending ~{len(code)} chars to {model} via {label} ({url}) ...")
+    result = review(code, model, key, url)
     date = datetime.date.today().isoformat()
     name = os.path.basename(os.path.abspath(a.project).rstrip("/"))
     note = (
         f"# Audit-{name}-llm-{date}\n"
-        f"source: {a.project}\nmodel: {a.model}\nbackend: {label}\nreviewed: {date}\n\n"
+        f"source: {a.project}\nmodel: {model}\nbackend: {label}\nreviewed: {date}\n\n"
         f"## LLM review (#9)\n\n{result}\n"
     )
     v = resolve_vault(a.vault)

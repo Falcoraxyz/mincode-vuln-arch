@@ -10,6 +10,8 @@ Judges by STRUCTURE only (human or AI-authored both fine):
 Writes [[Template-<name>]] note to vault + prints a reusable snippet.
 """
 import os, sys, subprocess, argparse, json, datetime, ast, re
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import config
 
 SKIP = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "dist", "build")
 GOD_LINES = 400
@@ -18,7 +20,8 @@ MAX_SNIPPETS_PER_MOD = 4
 
 def resolve_vault(explicit):
     """Read OBSIDIAN_VAULT_PATH from $HERMES_HOME/.env (consistent with hashchain.py),
-    then os.environ, then default. Do NOT rely on os.environ alone."""
+    then os.environ, then mincode.toml [vault] path, then default.
+    Do NOT rely on os.environ alone."""
     if explicit:
         return explicit
     env = os.path.join(os.environ.get("HERMES_HOME", os.path.expanduser("~/.hermes")), ".env")
@@ -29,6 +32,9 @@ def resolve_vault(explicit):
                     return line.strip().split("=", 1)[1]
     except Exception:
         pass
+    cfg_path = config.load_config().get("vault", {}).get("path")
+    if cfg_path:
+        return cfg_path
     return os.environ.get("OBSIDIAN_VAULT_PATH") or os.path.expanduser("~/Documents/Obsidian Vault")
 
 
