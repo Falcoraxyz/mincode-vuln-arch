@@ -139,15 +139,18 @@ Use `scripts/cross_learn.py [--vault <dir>]`.
   as more audits land. Rerun after every audit.
 
 ### 5c. LLM-assisted code review — #9
-Use `scripts/llm_review.py <project> [--model <name>]`.
+Use `scripts/llm_review.py <project> [--model <name>] [--backend <url>]`.
 - Sends source files (excludes `tests/`) to an OpenAI-compatible chat endpoint
   and asks the model to flag logic bugs / authz / TOCTOU / injection-via-data /
   dead code that the heuristic audit cannot catch.
-- Requires `OPENAI_API_KEY` (optional `OPENAI_BASE_URL`, `OPENAI_MODEL`); if unset
-  it prints a notice and exits 0 — the heuristic audit still applies. Stdlib only
-  (urllib), no SDK dependency.
-- Writes `[[Audit-<project>-llm-<date>]]` to the vault. Use after `audit.py` to
-  cover the blind spots regex misses. Network + key needed; not for offline use.
+- **Backends auto-detect** (local-first, no key needed): explicit
+  `OPENAI_BASE_URL`/`OPENAI_API_KEY` → local **Ollama** (`http://localhost:11434/v1`)
+  → **llama.cpp** (`http://localhost:8080/v1`) → OpenAI cloud. If no backend is
+  reachable it prints a notice and exits 0 — the heuristic audit still applies.
+  Stdlib only (urllib), no SDK dependency.
+- Writes `[[Audit-<project>-llm-<date>]]` to the vault (with `backend:` recorded).
+  Use after `audit.py` to cover the blind spots regex misses. Offline-friendly via
+  Ollama/llama.cpp.
 
 ### 2b. Living architecture table — #10
 `sample_repo.py` now auto-detects stacks in a mined repo (CLI, Web API, FastAPI,
@@ -283,6 +286,7 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.
 - `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
 - `references/audit-output-formats.md` — how to add `--sarif`/`--report`/future formats (pure `to_<fmt>` fn, call after grade), the `main()` regression trap (don't drop the `cwes.add`+`print` loop), and the `--run-tests` fixture recipe. Read before editing `audit.py main()`.
+- `references/test-skill-scripts.md` — how to import/unit-test THIS skill's own `scripts/*.py` from the terminal on Windows+git-bash (MSYS path trap, `$SKILL` single-quote trap, `/tmp` nonexistence). Read before debugging a script in-place.
 
 ## gen_ci.py pitfalls (CI gate #1b)
 - The workflow YAML must be **portable**: copy scripts into the target repo as

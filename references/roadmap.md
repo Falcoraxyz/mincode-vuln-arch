@@ -22,7 +22,8 @@ Order of operations per item:
 #1 dep CVE (pip-audit) · #2 CWE+grade · #3 HMAC chain · #4 snippet · #5 gen_tests
 · #6 auto-git · #7 MOC · #8 cross-learn · #9 LLM review · #10 living arch table
 · #1b CI gate (gen_ci.py) · #2b test-execution gate (audit.py --run-tests)
-· #3b multi-language audit · #4b SARIF export · #8b assertion-aware gen_tests
+· #3b multi-language audit · #4b SARIF export · #7b HTML report (audit.py --report)
+· #8b assertion-aware gen_tests · #9b arch auto-apply (sample_repo.py --apply-arch)
 
 ## Pending backlog (from the second ideation pass)
 - #5 **Local LLM** — `llm_review.py` should auto-detect Ollama / llama.cpp
@@ -30,10 +31,6 @@ Order of operations per item:
   philosophy.
 - #6 **Vault diff / regression** — `hashchain.py diff <project>` shows new
   findings since the last audit of the same project (not just integrity verify).
-- #7 **HTML report** — `audit.py --report out.html` with severity colours +
-  CWE links + grade badge, for human-readable output.
-- #9 **Arch auto-apply** — when `sample_repo.py` flags a missing SKILL.md table
-  row, offer to append it directly (now it only suggests).
 - #10 **Config file** — `mincode.toml` for threshold / vault path / model /
   skip-dirs, replacing CLI flags.
 

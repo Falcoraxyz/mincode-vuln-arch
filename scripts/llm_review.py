@@ -17,6 +17,36 @@ SKIP_DIRS = (".git", "node_modules", "__pycache__", ".ok", "venv", ".venv", "tes
 EXT = (".py", ".js", ".ts", ".go", ".rs", ".java")
 MAX_CHARS = 12000  # cap context sent to the model
 
+# local-first fallback endpoints (no API key needed)
+LOCAL_ENDPOINTS = {
+    "ollama": "http://localhost:11434/v1",
+    "llamacpp": "http://localhost:8080/v1",
+}
+
+
+def detect_backend(model, api_key, base_url):
+    """Resolve (api_key, base_url, label). Precedence:
+    1. explicit OPENAI_BASE_URL / OPENAI_API_KEY env
+    2. Ollama local server (no key)
+    3. llama.cpp server (no key)
+    4. OpenAI cloud (requires key)
+    Returns (api_key, base_url, label, usable: bool)."""
+    if base_url and base_url != "https://api.openai.com/v1":
+        return api_key or "ollama", base_url, "custom", True
+    if api_key:
+        return api_key, base_url or "https://api.openai.com/v1", "openai", True
+    # probe local servers (HEAD /v1/models)
+    for label, url in LOCAL_ENDPOINTS.items():
+        try:
+            req = urllib.request.Request(url.rstrip("/") + "/models", method="GET")
+            with urllib.request.urlopen(req, timeout=2) as r:
+                if r.status == 200:
+                    return "ollama", url, label, True
+        except Exception:
+            continue
+    # fall back to OpenAI cloud; usable only if a key exists
+    return api_key or "", "https://api.openai.com/v1", "openai", bool(api_key)
+
 
 def resolve_vault(explicit):
     if explicit:
@@ -96,23 +126,28 @@ def main():
     ap.add_argument("project")
     ap.add_argument("--vault")
     ap.add_argument("--model", default=os.environ.get("OPENAI_MODEL", "gpt-4o-mini"))
+    ap.add_argument("--backend", default=os.environ.get("OPENAI_BASE_URL"),
+                    help="explicit OpenAI-compatible base URL (overrides auto-detect)")
     a = ap.parse_args()
     api_key = os.environ.get("OPENAI_API_KEY")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    if not api_key:
-        print("llm_review: no OPENAI_API_KEY set — skipping LLM review (heuristic audit still applies).")
+    base_url = a.backend or os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    key, url, label, usable = detect_backend(a.model, api_key, base_url)
+    if not usable:
+        print("llm_review: no backend available — set OPENAI_API_KEY, or run a local "
+              "Ollama (http://localhost:11434) / llama.cpp server. Skipping (heuristic "
+              "audit still applies).")
         sys.exit(0)
     code = collect(a.project)
     if not code:
         print("llm_review: no source files collected.")
         sys.exit(0)
-    print(f"llm_review: sending ~{len(code)} chars to {a.model} ...")
-    result = review(code, a.model, api_key, base_url)
+    print(f"llm_review: sending ~{len(code)} chars to {a.model} via {label} ({url}) ...")
+    result = review(code, a.model, key, url)
     date = datetime.date.today().isoformat()
     name = os.path.basename(os.path.abspath(a.project).rstrip("/"))
     note = (
         f"# Audit-{name}-llm-{date}\n"
-        f"source: {a.project}\nmodel: {a.model}\nreviewed: {date}\n\n"
+        f"source: {a.project}\nmodel: {a.model}\nbackend: {label}\nreviewed: {date}\n\n"
         f"## LLM review (#9)\n\n{result}\n"
     )
     v = resolve_vault(a.vault)
