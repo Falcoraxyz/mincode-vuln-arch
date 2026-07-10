@@ -55,7 +55,10 @@ Use `scripts/sample_repo.py <repo_path_or_url>`.
 - Extracts: dir layout, module boundaries, naming, public API surface, test ratio.
 - Flags "clean" only if: flat-ish modular layout, no god-files (>400 lines warning), tests present, no dead deps.
 - Writes a `[[Template-<name>]]` note to vault + a reusable snippet in `docs/`.
-- **Snippet extraction (#4):** also pulls public function/class signatures from
+- **Arch table auto-apply (#9):** `sample_repo.py --apply-arch` appends any
+  missing Architecture Decision rows (from `ARCH_PICKS` defaults) straight into
+  `SKILL.md` — closes the loop from the #10 living-arch-table suggestions
+  instead of only flagging them. Without the flag it still only *suggests*.
   clean `.py` modules into a `## Reusable snippets` section (vault note) and a
   local `docs/snippets.md` — reusable code patterns, not just structure stats.
 - Human OR AI-authored both accepted — judged by structure, not author.
@@ -221,6 +224,29 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
   exactly what `audit.py --run-tests` does (`run_tests()` glob `tests/*_test.py`,
   subprocess per file, PYTHONPATH-injected). Fallback: `python -m unittest
   tests.<mod>_test`. See `references/test-generation.md`.
+- **Editing `audit.py main()` is fragile (regression trap):** the findings-print
+  loop (`for sev, fp, ln, desc, cwe, snip in findings:` → `cwes.add(cwe)` +
+  `print(f"[{sev}] ...")`) lives INSIDE the same loop that counts `high`. When
+  adding a new flag/branch (e.g. `--run-tests`), a careless patch can DELETE that
+  loop — findings still compute a grade, but silently stop printing AND stop
+  collecting CWEs, so `CWEs:` prints empty and SARIF rule descriptions go blank.
+  Guardrail: any edit to `main()` MUST keep the `print`+`cwes.add` lines; verify
+  with a repo that has both a HIGH and a MED finding that BOTH print and the
+  `CWEs:` line is non-empty after the edit.
+- **Adding a new audit output format (`--sarif`, `--report`, future):** implement
+  as a pure function `to_<fmt>(findings, path, grade, penalty, high, cwes)` and
+  CALL IT AFTER `g, penalty = grade(findings)` and the findings loop (which fills
+  `high`/`cwes`). Calling before grade is computed yields a wrong badge/penalty.
+  The function reads `findings` + the computed scalars only — never recompute
+  grade inside it. `to_sarif()`/`to_html()` are the reference shapes.
+- **Verifying `--run-tests` with a hand-written fixture:** the test file MUST end
+  with `if __name__ == "__main__": unittest.main()` AND be runnable via
+  `from src import x` (needs PYTHONPATH=root, which `run_tests` injects). A file
+  WITHOUT the `unittest.main()` guard produces NO stdout (`Ran N tests` absent) →
+  `run_tests()` sees 0 tests and the gate passes vacuously, hiding a real
+  failure. When crafting a fixture to prove the gate fails, include the guard +
+  a real assertion (e.g. `assert isinstance(result, int)` that breaks when the
+  impl returns the wrong type).
 - **`audit.py` scanning its own bundled scripts:** `gen_ci.py` copies the skill
   scripts into the target repo as `.mincode/`. `audit.py`'s `eval`/`exec` regex
   matches the *literal pattern strings* inside `audit.py` itself, producing
@@ -256,6 +282,7 @@ Update this table as stacks evolve. Prefer newest only if it is stable + usable.
 - `references/audit-and-chain.md` — audit regex gotchas, hash-chain design, and the vault env-var resolution rule. Read before touching the scanners.
 - `references/windows-operations.md` — cross-drive relpath, junction creation via subprocess, consent-gate split. Read before any Windows path/move work.
 - `references/test-generation.md` — why `discover` reports 0 tests, the `__file__`-relative sys.path insert, and `__main__.py` skip. Read before touching gen_tests.py.
+- `references/audit-output-formats.md` — how to add `--sarif`/`--report`/future formats (pure `to_<fmt>` fn, call after grade), the `main()` regression trap (don't drop the `cwes.add`+`print` loop), and the `--run-tests` fixture recipe. Read before editing `audit.py main()`.
 
 ## gen_ci.py pitfalls (CI gate #1b)
 - The workflow YAML must be **portable**: copy scripts into the target repo as

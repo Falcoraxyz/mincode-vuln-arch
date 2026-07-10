@@ -137,6 +137,52 @@ def detect_stack_hints(path):
     return sorted(hints)
 
 
+# sensible default Pick/Why for each canonical stack, used when auto-applying
+# a missing row to the SKILL.md Architecture Decision table (#9).
+ARCH_PICKS = {
+    "CLI": ("stdlib + argparse/click, single `main()` entry, modules by verb",
+            "zero deps, minimal"),
+    "Web API": ("FastAPI (async, typed) OR stdlib `http.server`",
+                "typed + async, or zero-dep"),
+    "Data / ETL": ("pandas if needed, pure functions per transform step",
+                   "composable, testable"),
+    "Frontend": ("Vite + small framework (Svelte), component per feature",
+                 "fast, small bundle"),
+    "Long-running svc": ("supervisor/worker pattern, idempotent handlers",
+                         "resilient, restartable"),
+    "Storage": ("sqlite (stdlib) + repository module, migrations in code",
+                "zero-dep, simple"),
+}
+
+
+def apply_arch_table(skill_md, missing):
+    """Append missing Architecture Decision rows to SKILL.md (#9).
+    Returns list of rows actually added (skips if file/table not found)."""
+    if not missing or not os.path.exists(skill_md):
+        return []
+    lines = open(skill_md, encoding="utf-8").read().splitlines()
+    added = []
+    out = []
+    # locate the Architecture Decision table (first '| Stack | Pick | Why |')
+    table_idx = None
+    for i, ln in enumerate(lines):
+        if ln.strip().startswith("| Stack | Pick | Why"):
+            table_idx = i
+            break
+    if table_idx is None:
+        return []  # no table -> do not guess where to insert
+    # insert after the header + separator rows (i, i+1)
+    insert_at = table_idx + 2
+    for stack in missing:
+        pick, why = ARCH_PICKS.get(stack, ("(TODO: pick a stack)", "TODO"))
+        row = f"| {stack} | {pick} | {why} |"
+        added.append(row)
+    out = lines[:insert_at] + added + lines[insert_at:]
+    with open(skill_md, "w", encoding="utf-8") as f:
+        f.write("\n".join(out) + "\n")
+    return added
+
+
 def suggest_arch_table(path, skill_md):
     """Compare detected stacks against the Architecture Decision table in SKILL.md.
     Returns (detected_stacks, missing_stacks, update_available: bool)."""
@@ -178,6 +224,8 @@ def main():
     ap.add_argument("--vault")
     ap.add_argument("--skill", default=None,
                     help="path to SKILL.md for arch-table comparison (default: skill dir SKILL.md)")
+    ap.add_argument("--apply-arch", action="store_true",
+                    help="auto-append missing Architecture Decision rows to SKILL.md (#9)")
     a = ap.parse_args()
     path, cloned = clone_or_use(a.repo)
     info = analyze(path)
@@ -188,6 +236,11 @@ def main():
     skill_md = a.skill or os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "SKILL.md")
     detected, missing, update_avail = suggest_arch_table(path, skill_md)
+    applied = []
+    if a.apply_arch and missing:
+        applied = apply_arch_table(skill_md, missing)
+        if applied:
+            print(f"[arch] applied {len(applied)} row(s) to {skill_md}")
     snippet = (
         f"# Template-{name}\n"
         f"source: {a.repo}\nverdict: {verdict}\n"
@@ -203,6 +256,7 @@ def main():
         f"- detected stacks: {', '.join(detected) or '_none_'}\n"
         + (f"- **UPDATE SKILL.md**: missing rows for: {', '.join(missing)}\n"
            f"  add to Architecture Decision table so future scaffolds use them.\n"
+           + (f"- [auto-applied {len(applied)} row(s) via --apply-arch]\n" if applied else "")
            if update_avail else "- arch table already covers detected stacks ✓\n")
     )
     print(snippet)

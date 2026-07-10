@@ -27,6 +27,7 @@ library (optional `bandit` / `pip-audit` / an LLM key deepen coverage).
 | 2d | **HTML report** | `audit.py` | `--report out.html` (self-contained: severity colors, CWE links, grade badge). Uploaded by CI. |
 | 3 | **Mine architecture** | `sample_repo.py` | Extract clean module boundaries + reusable code snippets from any repo (human or AI-authored). |
 | 3b | **Multi-language audit** | `audit.py` | Heuristic scan across Python + JS/TS/Go/Rust/sh (polyglot rules), CWE-tagged. |
+| 3c | **Arch auto-apply** | `sample_repo.py` | `--apply-arch` appends missing Architecture Decision rows to SKILL.md (#9). |
 | 4 | **Gen tests** | `gen_tests.py` | `ast`-based test generation — typed dummy args + `isinstance` assertions from return annotations (#8). Zero-dep `unittest`. |
 | 5 | **Hash-chain vault** | `hashchain.py` | Local, append-only, **HMAC-signed** notes — tamper-evident + forged-resistant. No network. |
 | 6 | **Vault MOC** | `vault_index.py` | Auto-generated Obsidian Map of Content with `[[wikilinks]]` + CWE cross-links. |
